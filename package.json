@@ -1,0 +1,38 @@
+{
+  "name": "token-launchpad",
+  "version": "0.1.1",
+  "author": "DFST",
+  "scripts": {
+    "test": "jest",
+    "local": "jest worker.test --chain=local --cloud=local --deploy=true --mint=true",
+    "devnet": "jest worker.test --chain=devnet --cloud=local --deploy=true --mint=false"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.13",
+    "@types/node": "^22.5.4",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.2"
+  },
+  "packageManager": "yarn@4.4.0",
+  "dependencies": {
+    "arweave": "^1.15.1",
+    "o1js": "^1.7.0",
+    "zkcloudworker": "^0.12.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "slowTestThreshold": 1500,
+    "testTimeout": 10800000,
+    "bail": true,
+    "verbose": true,
+    "roots": [
+      "tests"
+    ],
+    "setupFilesAfterEnv": [
+      "./jest-config.ts"
+    ]
+  }
+}
