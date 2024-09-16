@@ -20,6 +20,8 @@ import {
 import { FungibleToken } from "./FungibleToken";
 import { FungibleTokenAdmin } from "./FungibleTokenAdmin";
 import { WALLET } from "../env.json";
+const MINT_FEE = 1e8;
+const ISSUE_FEE = 1e9;
 
 export class TokenLauncherWorker extends zkCloudWorker {
   static contractVerificationKey: VerificationKey | undefined = undefined;
@@ -124,6 +126,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     );
     const adminContractPublicKey = adminContractPrivateKey.toPublicKey();
     console.log("Admin Contract", adminContractPublicKey.toBase58());
+    const wallet = PublicKey.fromBase58(WALLET);
     const zkToken = new FungibleToken(contractAddress);
     const zkAdmin = new FungibleTokenAdmin(adminContractPublicKey);
     await this.compile({ compileAdmin: true });
@@ -136,18 +139,27 @@ export class TokenLauncherWorker extends zkCloudWorker {
       publicKey: sender,
       force: true,
     });
+    await fetchMinaAccount({
+      publicKey: wallet,
+    });
 
     if (!Mina.hasAccount(sender)) {
       console.error("Sender does not have account");
       return "Sender does not have account";
     }
+    const isNewWallet = Mina.hasAccount(wallet) ? false : true;
 
     console.log("Sender balance:", await accountBalanceMina(sender));
 
     const tx = await Mina.transaction(
       { sender, fee: await fee(), memo },
       async () => {
-        AccountUpdate.fundNewAccount(sender, 3);
+        AccountUpdate.fundNewAccount(sender, 3 + (isNewWallet ? 1 : 0));
+        const provingFee = AccountUpdate.createSigned(sender);
+        provingFee.send({
+          to: PublicKey.fromBase58(WALLET),
+          amount: UInt64.from(ISSUE_FEE),
+        });
         await zkAdmin.deploy({ adminPublicKey: sender });
         zkAdmin.account.zkappUri.set(args.uri);
         await zkToken.deploy({
@@ -449,7 +461,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
         const provingFee = AccountUpdate.createSigned(sender);
         provingFee.send({
           to: PublicKey.fromBase58(WALLET),
-          amount: UInt64.from(1e9),
+          amount: UInt64.from(MINT_FEE),
         });
         await zkApp.mint(receiver, amount);
       }
