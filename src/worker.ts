@@ -5,6 +5,8 @@ import {
   sleep,
   fetchMinaAccount,
   accountBalanceMina,
+  FungibleToken,
+  FungibleTokenAdmin,
 } from "zkcloudworker";
 import {
   VerificationKey,
@@ -17,8 +19,6 @@ import {
   UInt8,
   Bool,
 } from "o1js";
-import { FungibleToken } from "./FungibleToken";
-import { FungibleTokenAdmin } from "./FungibleTokenAdmin";
 import { WALLET } from "../env.json";
 const MINT_FEE = 1e8;
 const ISSUE_FEE = 1e9;

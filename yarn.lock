@@ -851,12 +851,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^22.5.4":
+"@types/node@npm:*":
   version: 22.5.4
   resolution: "@types/node@npm:22.5.4"
   dependencies:
     undici-types: "npm:~6.19.2"
   checksum: 10c0/b445daa7eecd761ad4d778b882d6ff7bcc3b4baad2086ea9804db7c5d4a4ab0298b00d7f5315fc640a73b5a1d52bbf9628e09c9fec0cf44dbf9b4df674a8717d
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^22.7.3":
+  version: 22.7.3
+  resolution: "@types/node@npm:22.7.3"
+  dependencies:
+    undici-types: "npm:~6.19.2"
+  checksum: 10c0/0e579813528b0370454337a952f43b792cd12731e10fdca0fdb627158e980c1219bba99e9048c134b6a19325d817016059afe016ccd372326c838a1b85a51574
   languageName: node
   linkType: hard
 
@@ -1030,7 +1039,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.7.2":
+"axios@npm:^1.7.7":
   version: 1.7.7
   resolution: "axios@npm:1.7.7"
   dependencies:
@@ -2906,7 +2915,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nats@npm:^2.27.0":
+"nats@npm:^2.28.2":
   version: 2.28.2
   resolution: "nats@npm:2.28.2"
   dependencies:
@@ -3013,9 +3022,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"o1js@npm:^1.7.0":
-  version: 1.7.0
-  resolution: "o1js@npm:1.7.0"
+"o1js@npm:^1.8.0":
+  version: 1.8.0
+  resolution: "o1js@npm:1.8.0"
   dependencies:
     blakejs: "npm:1.2.1"
     cachedir: "npm:^2.4.0"
@@ -3025,7 +3034,7 @@ __metadata:
     tslib: "npm:^2.3.0"
   bin:
     snarky-run: src/build/run.js
-  checksum: 10c0/ba275e187cf35b817e490bcd7fe6105e2ac6fc22a12e0b7872f7df7e595a08f6e09c9291cfbf6352d3583337f210f6d3fb5ccf9c5787c864d54861c83761b396
+  checksum: 10c0/a1c58a22937eb9bcc33a8763bea8cde40ca93a7afb8ee684e1ebc756bdc2aa504e8164868da490ca2146ef813d79b33a0beb589c7ab433bcddbdf9d38911a9dc
   languageName: node
   linkType: hard
 
@@ -3611,13 +3620,13 @@ __metadata:
   dependencies:
     "@jest/globals": "npm:^29.7.0"
     "@types/jest": "npm:^29.5.13"
-    "@types/node": "npm:^22.5.4"
+    "@types/node": "npm:^22.7.3"
     arweave: "npm:^1.15.1"
     jest: "npm:^29.7.0"
-    o1js: "npm:^1.7.0"
+    o1js: "npm:^1.8.0"
     ts-jest: "npm:^29.2.5"
     typescript: "npm:^5.6.2"
-    zkcloudworker: "npm:^0.12.2"
+    zkcloudworker: "npm:^0.14.0"
   languageName: unknown
   linkType: soft
 
@@ -3907,15 +3916,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.12.2":
-  version: 0.12.2
-  resolution: "zkcloudworker@npm:0.12.2"
+"zkcloudworker@npm:^0.14.0":
+  version: 0.14.0
+  resolution: "zkcloudworker@npm:0.14.0"
   dependencies:
-    axios: "npm:^1.7.2"
+    axios: "npm:^1.7.7"
     chalk: "npm:^4.1.2"
-    nats: "npm:^2.27.0"
+    nats: "npm:^2.28.2"
   peerDependencies:
-    o1js: ^1.4.0
-  checksum: 10c0/2b1f19279409001cbde92a83711570c18ff6ec3a787fefaabbb6c4c6fbe4d923d32e6cffd07eb3efeecd809604f1ddeeae4214aed38e6ce4ad46287d2cb1f437
+    o1js: ^1.8.0
+  checksum: 10c0/a4cfbb0a3fbe0a6679c986366c7d4ba9454c1d45c208f94a5bbc47a3db47d4940b324f40ca2cfa03e86d33afeee0510656b7597f2627fd4ad0a099564fc4e0a3
   languageName: node
   linkType: hard
