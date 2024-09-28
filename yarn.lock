@@ -860,12 +860,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.7.3":
-  version: 22.7.3
-  resolution: "@types/node@npm:22.7.3"
+"@types/node@npm:^22.7.4":
+  version: 22.7.4
+  resolution: "@types/node@npm:22.7.4"
   dependencies:
     undici-types: "npm:~6.19.2"
-  checksum: 10c0/0e579813528b0370454337a952f43b792cd12731e10fdca0fdb627158e980c1219bba99e9048c134b6a19325d817016059afe016ccd372326c838a1b85a51574
+  checksum: 10c0/c22bf54515c78ff3170142c1e718b90e2a0003419dc2d55f79c9c9362edd590a6ab1450deb09ff6e1b32d1b4698da407930b16285e8be3a009ea6cd2695cac01
   languageName: node
   linkType: hard
 
@@ -2915,15 +2915,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nats@npm:^2.28.2":
-  version: 2.28.2
-  resolution: "nats@npm:2.28.2"
-  dependencies:
-    nkeys.js: "npm:1.1.0"
-  checksum: 10c0/5f7a5665908b1038c2a0018a02951bab0718a20322324fe102d268d0e1183ddfe93a0587b3d0a7d4c86be3428125cee605e2f3878f419b10f7fb277453edb733
-  languageName: node
-  linkType: hard
-
 "natural-compare@npm:^1.4.0":
   version: 1.4.0
   resolution: "natural-compare@npm:1.4.0"
@@ -2935,15 +2926,6 @@ __metadata:
   version: 0.6.3
   resolution: "negotiator@npm:0.6.3"
   checksum: 10c0/3ec9fd413e7bf071c937ae60d572bc67155262068ed522cf4b3be5edbe6ddf67d095ec03a3a14ebf8fc8e95f8e1d61be4869db0dbb0de696f6b837358bd43fc2
-  languageName: node
-  linkType: hard
-
-"nkeys.js@npm:1.1.0":
-  version: 1.1.0
-  resolution: "nkeys.js@npm:1.1.0"
-  dependencies:
-    tweetnacl: "npm:1.0.3"
-  checksum: 10c0/44ff8d61e46d2b345351ed7844d66036a815aeca23927def6ca258e27a18a1678fe5ab161c5cf0b6e3a3993a945d422b71036986d09669b214540c8491478bef
   languageName: node
   linkType: hard
 
@@ -3620,13 +3602,13 @@ __metadata:
   dependencies:
     "@jest/globals": "npm:^29.7.0"
     "@types/jest": "npm:^29.5.13"
-    "@types/node": "npm:^22.7.3"
+    "@types/node": "npm:^22.7.4"
     arweave: "npm:^1.15.1"
     jest: "npm:^29.7.0"
     o1js: "npm:^1.8.0"
     ts-jest: "npm:^29.2.5"
     typescript: "npm:^5.6.2"
-    zkcloudworker: "npm:^0.14.0"
+    zkcloudworker: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
 
@@ -3678,13 +3660,6 @@ __metadata:
   version: 2.7.0
   resolution: "tslib@npm:2.7.0"
   checksum: 10c0/469e1d5bf1af585742128827000711efa61010b699cb040ab1800bcd3ccdd37f63ec30642c9e07c4439c1db6e46345582614275daca3e0f4abae29b0083f04a6
-  languageName: node
-  linkType: hard
-
-"tweetnacl@npm:1.0.3":
-  version: 1.0.3
-  resolution: "tweetnacl@npm:1.0.3"
-  checksum: 10c0/069d9df51e8ad4a89fbe6f9806c68e06c65be3c7d42f0701cc43dba5f0d6064686b238bbff206c5addef8854e3ce00c643bff59432ea2f2c639feab0ee1a93f9
   languageName: node
   linkType: hard
 
@@ -3916,15 +3891,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.14.0":
-  version: 0.14.0
-  resolution: "zkcloudworker@npm:0.14.0"
+"zkcloudworker@npm:^0.14.3":
+  version: 0.14.3
+  resolution: "zkcloudworker@npm:0.14.3"
   dependencies:
     axios: "npm:^1.7.7"
     chalk: "npm:^4.1.2"
-    nats: "npm:^2.28.2"
   peerDependencies:
     o1js: ^1.8.0
-  checksum: 10c0/a4cfbb0a3fbe0a6679c986366c7d4ba9454c1d45c208f94a5bbc47a3db47d4940b324f40ca2cfa03e86d33afeee0510656b7597f2627fd4ad0a099564fc4e0a3
+  checksum: 10c0/b9dc5133333dd3a93a8ec35d9a697857dea71648e73d81123f3b44a03268b4fa1a8df2b73e14fe3bdf5d2ace322a50f22622a34ee82341316519e7d78cf37d6f
   languageName: node
   linkType: hard
