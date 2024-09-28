@@ -7,6 +7,9 @@ import {
   accountBalanceMina,
   FungibleToken,
   FungibleTokenAdmin,
+  FungibleTokenDeployParams,
+  transactionParams,
+  deserializeTransaction,
 } from "zkcloudworker";
 import {
   VerificationKey,
@@ -92,39 +95,34 @@ export class TokenLauncherWorker extends zkCloudWorker {
         return await this.mintTx(args);
 
       case "deploy":
-        return await this.deployTx(args);
+        if (transactions.length === 0) throw new Error("transactions is empty");
+        return await this.deployTx(transactions[0]);
 
       default:
         throw new Error(`Unknown task: ${this.cloud.task}`);
     }
   }
 
-  private async deployTx(args: {
-    contractPrivateKey: string;
-    adminPrivateString: string;
-    adminContractPrivateKey: string;
-    symbol: string;
-    uri: string;
-  }): Promise<string> {
-    if (args.adminPrivateString === undefined)
-      throw new Error("args.adminPrivateString is undefined");
-    if (args.adminContractPrivateKey === undefined)
-      throw new Error("args.adminContractPrivateKey is undefined");
-    if (args.contractPrivateKey === undefined)
-      throw new Error("args.contractPrivateKey is undefined");
-    if (args.uri === undefined) throw new Error("args.uri is undefined");
-    if (args.symbol === undefined) throw new Error("args.symbol is undefined");
+  private async deployTx(transaction: string): Promise<string> {
+    const args: FungibleTokenDeployParams = JSON.parse(transaction);
+    if (
+      args.adminContractPublicKey === undefined ||
+      args.adminPublicKey === undefined ||
+      args.chain === undefined ||
+      args.serializedTransaction === undefined ||
+      args.signedData === undefined ||
+      args.tokenPublicKey === undefined ||
+      args.uri === undefined ||
+      args.symbol === undefined
+    ) {
+      throw new Error("One or more required args are undefined");
+    }
 
-    const privateKey = PrivateKey.fromBase58(args.adminPrivateString);
-    const sender = privateKey.toPublicKey();
-    console.log("Admin (sender)", sender.toBase58());
-    const contractPrivateKey = PrivateKey.fromBase58(args.contractPrivateKey);
-    const contractAddress = contractPrivateKey.toPublicKey();
+    const contractAddress = PublicKey.fromBase58(args.tokenPublicKey);
     console.log("Contract", contractAddress.toBase58());
-    const adminContractPrivateKey = PrivateKey.fromBase58(
-      args.adminContractPrivateKey
+    const adminContractPublicKey = PublicKey.fromBase58(
+      args.adminContractPublicKey
     );
-    const adminContractPublicKey = adminContractPrivateKey.toPublicKey();
     console.log("Admin Contract", adminContractPublicKey.toBase58());
     const wallet = PublicKey.fromBase58(WALLET);
     const zkToken = new FungibleToken(contractAddress);
@@ -133,8 +131,16 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
     console.log(`Sending tx...`);
     console.time("prepared tx");
-    const memo = "deploy token";
+    const signedJson = JSON.parse(args.signedData);
 
+    const { fee, sender, nonce, memo } = transactionParams(
+      args.serializedTransaction,
+      signedJson
+    );
+    console.log("Admin (sender)", sender.toBase58());
+
+    if (sender.toBase58() != args.adminPublicKey)
+      throw new Error("Invalid sender");
     await fetchMinaAccount({
       publicKey: sender,
       force: true,
@@ -147,14 +153,13 @@ export class TokenLauncherWorker extends zkCloudWorker {
       console.error("Sender does not have account");
       return "Sender does not have account";
     }
-    const isNewWallet = Mina.hasAccount(wallet) ? false : true;
 
     console.log("Sender balance:", await accountBalanceMina(sender));
 
-    const tx = await Mina.transaction(
-      { sender, fee: await fee(), memo },
+    const txNew = await Mina.transaction(
+      { sender, fee, memo, nonce },
       async () => {
-        AccountUpdate.fundNewAccount(sender, 3 + (isNewWallet ? 1 : 0));
+        AccountUpdate.fundNewAccount(sender, 3);
         const provingFee = AccountUpdate.createSigned(sender);
         provingFee.send({
           to: PublicKey.fromBase58(WALLET),
@@ -177,11 +182,14 @@ export class TokenLauncherWorker extends zkCloudWorker {
         );
       }
     );
+    const tx = deserializeTransaction(
+      args.serializedTransaction,
+      txNew,
+      signedJson
+    );
     await tx.prove();
-    tx.sign([privateKey, contractPrivateKey, adminContractPrivateKey]);
 
     if (tx === undefined) throw new Error("tx is undefined");
-    tx.sign([privateKey]);
     try {
       console.time("proved tx");
       await tx.prove();
