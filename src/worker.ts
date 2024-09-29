@@ -129,7 +129,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const zkAdmin = new FungibleTokenAdmin(adminContractPublicKey);
     await this.compile({ compileAdmin: true });
 
-    console.log(`Sending tx...`);
+    console.log(`Preparing tx...`);
     console.time("prepared tx");
     const signedJson = JSON.parse(args.signedData);
 
@@ -195,43 +195,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
       await tx.prove();
       console.timeEnd("proved tx");
       console.timeEnd("prepared tx");
-      let txSent;
-      let sent = false;
-      while (!sent) {
-        txSent = await tx.safeSend();
-        if (txSent.status == "pending") {
-          sent = true;
-          console.log(
-            `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
-          );
-        } else if (this.cloud.chain === "zeko") {
-          console.log("Retrying Zeko tx");
-          await sleep(10000);
-        } else {
-          console.log(
-            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`
-          );
-          return "Error sending transaction";
-        }
-      }
-      if (this.cloud.isLocalCloud && txSent?.status === "pending") {
-        const txIncluded = await txSent.safeWait();
-        console.log(
-          `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
-        );
-        return txIncluded.hash;
-      }
-      if (txSent?.hash)
-        this.cloud.publishTransactionMetadata({
-          txId: txSent?.hash,
-          metadata: {
-            admin: sender.toBase58(),
-            contractAddress: contractAddress.toBase58(),
-            adminContractAddress: adminContractPublicKey.toBase58(),
-            type: "deploy",
-          } as any,
-        });
-      return txSent?.hash ?? "Error sending transaction";
+      const result = JSON.stringify(
+        { success: true, tx: tx.toJSON() },
+        null,
+        2
+      );
+      return result;
     } catch (error) {
       console.error("Error sending transaction", error);
       return "Error sending transaction";
