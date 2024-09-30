@@ -1001,7 +1001,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"arweave@npm:^1.10.13, arweave@npm:^1.15.1":
+"arweave@npm:^1.10.13":
   version: 1.15.1
   resolution: "arweave@npm:1.15.1"
   dependencies:
@@ -1010,6 +1010,18 @@ __metadata:
     base64-js: "npm:^1.5.1"
     bignumber.js: "npm:^9.0.2"
   checksum: 10c0/2af04ee2071d3aa95f4ebf11463542ea18bc5eab810025a7b2ce60a6175ff7859f1447a925234e8bee31631f2fd2d67af80826909f65bc793d72dcb080cab26f
+  languageName: node
+  linkType: hard
+
+"arweave@npm:^1.15.3":
+  version: 1.15.3
+  resolution: "arweave@npm:1.15.3"
+  dependencies:
+    arconnect: "npm:^0.4.2"
+    asn1.js: "npm:^5.4.1"
+    base64-js: "npm:^1.5.1"
+    bignumber.js: "npm:^9.0.2"
+  checksum: 10c0/590b4658e32ea2c9f56d6934d08294bfb1b61c1180a453e5f27cd89420e2da72506bfc870c19e52c5175627fd33e5a8f988bd7a2961b7298d41d61800d29c58b
   languageName: node
   linkType: hard
 
@@ -3603,12 +3615,12 @@ __metadata:
     "@jest/globals": "npm:^29.7.0"
     "@types/jest": "npm:^29.5.13"
     "@types/node": "npm:^22.7.4"
-    arweave: "npm:^1.15.1"
+    arweave: "npm:^1.15.3"
     jest: "npm:^29.7.0"
     o1js: "npm:^1.8.0"
     ts-jest: "npm:^29.2.5"
     typescript: "npm:^5.6.2"
-    zkcloudworker: "npm:^0.14.3"
+    zkcloudworker: "npm:^0.14.4"
   languageName: unknown
   linkType: soft
 
@@ -3891,14 +3903,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.14.3":
-  version: 0.14.3
-  resolution: "zkcloudworker@npm:0.14.3"
+"zkcloudworker@npm:^0.14.4":
+  version: 0.14.4
+  resolution: "zkcloudworker@npm:0.14.4"
   dependencies:
     axios: "npm:^1.7.7"
     chalk: "npm:^4.1.2"
   peerDependencies:
     o1js: ^1.8.0
-  checksum: 10c0/b9dc5133333dd3a93a8ec35d9a697857dea71648e73d81123f3b44a03268b4fa1a8df2b73e14fe3bdf5d2ace322a50f22622a34ee82341316519e7d78cf37d6f
+  checksum: 10c0/ba3312ab31ae93b9ac32bd5f9e877fc2925abc8d71d8c1906b931d1e9aa84bcd44bbe84c6ef520a30bed0f49564a8c199c7d1db94828df450db037eed9119cf5
   languageName: node
   linkType: hard
