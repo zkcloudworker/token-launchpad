@@ -9,6 +9,7 @@ import {
   FungibleTokenAdmin,
   FungibleTokenDeployParams,
   FungibleTokenMintParams,
+  FungibleTokenTransferParams,
   FungibleTokenJobResult,
   transactionParams,
   deserializeTransaction,
@@ -27,7 +28,7 @@ import {
 import { WALLET } from "../env.json";
 const MINT_FEE = 1e8;
 const ISSUE_FEE = 1e9;
-
+const TRANSFER_FEE = 1e8;
 export class TokenLauncherWorker extends zkCloudWorker {
   static contractVerificationKey: VerificationKey | undefined = undefined;
   static contractAdminVerificationKey: VerificationKey | undefined = undefined;
@@ -85,13 +86,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
   }
 
   public async execute(transactions: string[]): Promise<string | undefined> {
-    if (this.cloud.args === undefined)
-      throw new Error("this.cloud.args is undefined");
-    const args = JSON.parse(this.cloud.args);
-
     switch (this.cloud.task) {
       case "transfer":
-        return await this.transferTx(args);
+        if (transactions.length === 0) throw new Error("transactions is empty");
+        return await this.transferTx(transactions[0]);
 
       case "mint":
         if (transactions.length === 0) throw new Error("transactions is empty");
@@ -432,7 +430,9 @@ export class TokenLauncherWorker extends zkCloudWorker {
             admin: sender.toBase58(),
             contractAddress: contractAddress.toBase58(),
             adminContractAddress: adminContractPublicKey.toBase58(),
-            type: "deploy",
+            to: to.toBase58(),
+            amount: amount.toBigInt().toString(),
+            type: "mint",
           } as any,
         });
       return this.stringifyJobResult({
@@ -454,251 +454,118 @@ export class TokenLauncherWorker extends zkCloudWorker {
     }
   }
 
-  private async transferTx(args: {
-    amount: number;
-    contractAddress: string;
-    from: string;
-    to: string;
-  }): Promise<string> {
-    if (args.amount === undefined) throw new Error("args.amount is undefined");
-    if (args.contractAddress === undefined)
-      throw new Error("args.contractAddress is undefined");
-    if (args.from === undefined) throw new Error("args.from is undefined");
-    if (args.to === undefined) throw new Error("args.to is undefined");
+  private async transferTx(transaction: string): Promise<string> {
+    const args: FungibleTokenTransferParams = JSON.parse(transaction);
+    if (
+      args.chain === undefined ||
+      args.serializedTransaction === undefined ||
+      args.signedData === undefined ||
+      args.tokenPublicKey === undefined ||
+      args.symbol === undefined ||
+      args.sendTransaction === undefined ||
+      args.amount === undefined ||
+      args.to === undefined ||
+      args.from === undefined
+    ) {
+      throw new Error("One or more required args are undefined");
+    }
 
-    const privateKey = PrivateKey.fromBase58(args.from);
-    const sender = privateKey.toPublicKey();
-    console.log("Sender", sender.toBase58());
-    const receiver = PublicKey.fromBase58(args.to);
-    console.log("Receiver", receiver.toBase58());
-    const contractAddress = PublicKey.fromBase58(args.contractAddress);
+    const contractAddress = PublicKey.fromBase58(args.tokenPublicKey);
     console.log("Contract", contractAddress.toBase58());
-    const amount = UInt64.from(args.amount);
-    console.log("Amount", amount.toBigInt().toString());
-    const zkApp = new FungibleToken(contractAddress);
-    await this.compile();
-
-    console.log(`Sending tx...`);
-    console.time("prepared tx");
-    const memo = "send token";
-    const tokenId = zkApp.deriveTokenId();
-
-    await fetchMinaAccount({
-      publicKey: contractAddress,
-      force: true,
-    });
-    await fetchMinaAccount({
-      publicKey: sender,
-      force: true,
-    });
-    await fetchMinaAccount({
-      publicKey: sender,
-      tokenId,
-      force: true,
-    });
-
-    await fetchMinaAccount({
-      publicKey: receiver,
-      tokenId,
-      force: false,
-    });
-
-    const isNewAccount = Mina.hasAccount(receiver, tokenId) ? false : true;
-    if (!Mina.hasAccount(contractAddress)) {
-      console.error("Contract does not have account");
-      return "Contract does not have account";
-    }
-    if (!Mina.hasAccount(sender, tokenId)) {
-      console.error("Sender does not have account for this token");
-      return "Sender does not have account for this token";
-    }
-    if (!Mina.hasAccount(sender)) {
-      console.error("Sender does not have account");
-      return "Sender does not have account";
-    }
-
-    console.log("Sender balance:", await accountBalanceMina(sender));
-
-    const tx = await Mina.transaction(
-      {
-        sender,
-        memo,
-        fee: await fee(),
-      },
-      async () => {
-        if (isNewAccount) {
-          AccountUpdate.fundNewAccount(sender);
-        }
-        await zkApp.transfer(sender, receiver, amount);
-      }
-    );
-
-    if (tx === undefined) throw new Error("tx is undefined");
-    tx.sign([privateKey]);
-    try {
-      console.time("proved tx");
-      await tx.prove();
-      console.timeEnd("proved tx");
-      console.timeEnd("prepared tx");
-      let txSent;
-      let sent = false;
-      while (!sent) {
-        txSent = await tx.safeSend();
-        if (txSent.status == "pending") {
-          sent = true;
-          console.log(
-            `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
-          );
-        } else if (this.cloud.chain === "zeko") {
-          console.log("Retrying Zeko tx");
-          await sleep(10000);
-        } else {
-          console.log(
-            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`
-          );
-          return "Error sending transaction";
-        }
-      }
-      if (this.cloud.isLocalCloud && txSent?.status === "pending") {
-        const txIncluded = await txSent.safeWait();
-        console.log(
-          `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
-        );
-        return txIncluded.hash;
-      }
-      if (txSent?.hash)
-        this.cloud.publishTransactionMetadata({
-          txId: txSent?.hash,
-          metadata: {
-            sender: sender.toBase58(),
-            receiver: receiver.toBase58(),
-            amount: amount.toBigInt().toString(),
-            contractAddress: contractAddress.toBase58(),
-            type: "transfer",
-          } as any,
-        });
-      return txSent?.hash ?? "Error sending transaction";
-    } catch (error) {
-      console.error("Error sending transaction", error);
-      return "Error sending transaction";
-    }
-  }
-
-  /*
-  private async mintTx(args: {
-    amount: number;
-    contractAddress: string;
-    to: string;
-    adminPrivateKey: string;
-  }): Promise<string> {
-    if (args.amount === undefined) throw new Error("args.amount is undefined");
-    if (args.contractAddress === undefined)
-      throw new Error("args.contractAddress is undefined");
-    if (args.adminPrivateKey === undefined)
-      throw new Error("args.from is undefined");
-    if (args.to === undefined) throw new Error("args.to is undefined");
-
-    const privateKey = PrivateKey.fromBase58(args.adminPrivateKey);
-    const sender = privateKey.toPublicKey();
-    console.log("Sender", sender.toBase58());
-    const receiver = PublicKey.fromBase58(args.to);
-    console.log("Receiver", receiver.toBase58());
-    const contractAddress = PublicKey.fromBase58(args.contractAddress);
-    console.log("Contract", contractAddress.toBase58());
-    const amount = UInt64.from(args.amount);
-    console.log("Amount", amount.toBigInt().toString());
     const wallet = PublicKey.fromBase58(WALLET);
-    const zkApp = new FungibleToken(contractAddress);
+    const zkToken = new FungibleToken(contractAddress);
+    const tokenId = zkToken.deriveTokenId();
+    const from = PublicKey.fromBase58(args.from);
+    const to = PublicKey.fromBase58(args.to);
+    const amount = UInt64.from(args.amount);
     await this.compile({ compileAdmin: true });
 
-    console.log(`Sending tx...`);
+    console.log(`Preparing tx...`);
     console.time("prepared tx");
-    const memo = "mint token";
-    const tokenId = zkApp.deriveTokenId();
+    const signedJson = JSON.parse(args.signedData);
 
+    const { fee, sender, nonce, memo } = transactionParams(
+      args.serializedTransaction,
+      signedJson
+    );
+    console.log("Sender:", sender.toBase58());
+
+    if (sender.toBase58() != from.toBase58()) throw new Error("Invalid sender");
+    await fetchMinaAccount({
+      publicKey: sender,
+      force: true,
+    });
     await fetchMinaAccount({
       publicKey: contractAddress,
       force: true,
     });
+
     await fetchMinaAccount({
       publicKey: contractAddress,
       tokenId,
       force: true,
     });
     await fetchMinaAccount({
-      publicKey: sender,
+      publicKey: to,
+      tokenId,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: from,
+      tokenId,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: from,
       force: true,
     });
     await fetchMinaAccount({
       publicKey: wallet,
-    });
-
-    await fetchMinaAccount({
-      publicKey: receiver,
-      tokenId,
-      force: false,
-    });
-
-    const zkAdminAddress = zkApp.admin.get();
-    if (zkAdminAddress === undefined) {
-      console.error("Admin address is undefined");
-      return "Admin address is undefined";
-    }
-    await fetchMinaAccount({
-      publicKey: zkAdminAddress,
       force: true,
     });
 
-    //const zkAdmin = new FungibleTokenAdmin(zkAdminAddress);
-
-    const isNewAccount = Mina.hasAccount(receiver, tokenId) ? false : true;
-    const isNewWallet = Mina.hasAccount(wallet) ? false : true;
-    const newAccountsCount = (isNewAccount ? 1 : 0) + (isNewWallet ? 1 : 0);
-    if (!Mina.hasAccount(contractAddress)) {
-      console.error("Contract does not have account");
-      return "Contract does not have account";
-    }
-    if (!Mina.hasAccount(contractAddress, tokenId)) {
-      console.error("Contract does not have account for this token");
-      return "Contract does not have account for this token";
-    }
     if (!Mina.hasAccount(sender)) {
       console.error("Sender does not have account");
       return "Sender does not have account";
     }
-    if (!Mina.hasAccount(zkAdminAddress)) {
-      console.error("Admin contract does not have account");
-      return "Admin contract does not have account";
-    }
 
     console.log("Sender balance:", await accountBalanceMina(sender));
+    const isNewAccount = Mina.hasAccount(to, tokenId) === false;
 
-    const tx = await Mina.transaction(
-      {
-        sender,
-        memo,
-        fee: await fee(),
-      },
+    const txNew = await Mina.transaction(
+      { sender, fee, memo, nonce },
       async () => {
-        if (newAccountsCount > 0) {
-          AccountUpdate.fundNewAccount(sender, newAccountsCount);
-        }
+        if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
         const provingFee = AccountUpdate.createSigned(sender);
         provingFee.send({
           to: PublicKey.fromBase58(WALLET),
-          amount: UInt64.from(MINT_FEE),
+          amount: UInt64.from(TRANSFER_FEE),
         });
-        await zkApp.mint(receiver, amount);
+        await zkToken.transfer(from, to, amount);
       }
     );
+    const tx = deserializeTransaction(
+      args.serializedTransaction,
+      txNew,
+      signedJson
+    );
+    await tx.prove();
+    const txJSON = tx.toJSON();
 
     if (tx === undefined) throw new Error("tx is undefined");
-    tx.sign([privateKey]);
     try {
       console.time("proved tx");
       await tx.prove();
       console.timeEnd("proved tx");
       console.timeEnd("prepared tx");
+
+      if (!args.sendTransaction) {
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+        });
+      }
+
       let txSent;
       let sent = false;
       while (!sent) {
@@ -713,9 +580,15 @@ export class TokenLauncherWorker extends zkCloudWorker {
           await sleep(10000);
         } else {
           console.log(
-            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`
+            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`,
+            txSent.errors
           );
-          return "Error sending transaction";
+          return this.stringifyJobResult({
+            success: false,
+            tx: txJSON,
+            hash: txSent.hash,
+            error: String(txSent.errors),
+          });
         }
       }
       if (this.cloud.isLocalCloud && txSent?.status === "pending") {
@@ -723,24 +596,40 @@ export class TokenLauncherWorker extends zkCloudWorker {
         console.log(
           `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
         );
-        return txIncluded.hash;
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+          hash: txIncluded.hash,
+        });
       }
       if (txSent?.hash)
         this.cloud.publishTransactionMetadata({
           txId: txSent?.hash,
           metadata: {
             admin: sender.toBase58(),
-            receiver: receiver.toBase58(),
-            amount: amount.toBigInt().toString(),
             contractAddress: contractAddress.toBase58(),
-            type: "mint",
+            from: from.toBase58(),
+            to: to.toBase58(),
+            amount: amount.toBigInt().toString(),
+            type: "transfer",
           } as any,
         });
-      return txSent?.hash ?? "Error sending transaction";
+      return this.stringifyJobResult({
+        success:
+          txSent?.hash !== undefined && txSent?.status == "pending"
+            ? true
+            : false,
+        tx: txJSON,
+        hash: txSent?.hash,
+        error: String(txSent?.errors ?? ""),
+      });
     } catch (error) {
       console.error("Error sending transaction", error);
-      return "Error sending transaction";
+      return this.stringifyJobResult({
+        success: false,
+        tx: txJSON,
+        error: String(error),
+      });
     }
   }
-  */
 }
