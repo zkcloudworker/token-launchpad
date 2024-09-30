@@ -86,13 +86,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
   }
 
   public async execute(transactions: string[]): Promise<string | undefined> {
-    if (this.cloud.args === undefined)
-      throw new Error("this.cloud.args is undefined");
-    const args = JSON.parse(this.cloud.args);
-
     switch (this.cloud.task) {
       case "transfer":
-        return await this.transferTx(args);
+        if (transactions.length === 0) throw new Error("transactions is empty");
+        return await this.transferTx(transactions[0]);
 
       case "mint":
         if (transactions.length === 0) throw new Error("transactions is empty");
