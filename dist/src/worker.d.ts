@@ -9,7 +9,8 @@ export declare class TokenLauncherWorker extends zkCloudWorker {
     create(transaction: string): Promise<string | undefined>;
     merge(proof1: string, proof2: string): Promise<string | undefined>;
     execute(transactions: string[]): Promise<string | undefined>;
+    private stringifyJobResult;
     private deployTx;
-    private transferTx;
     private mintTx;
+    private transferTx;
 }

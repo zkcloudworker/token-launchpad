@@ -8,6 +8,8 @@ import {
   FungibleToken,
   FungibleTokenAdmin,
   FungibleTokenDeployParams,
+  FungibleTokenMintParams,
+  FungibleTokenJobResult,
   transactionParams,
   deserializeTransaction,
 } from "zkcloudworker";
@@ -92,7 +94,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
         return await this.transferTx(args);
 
       case "mint":
-        return await this.mintTx(args);
+        if (transactions.length === 0) throw new Error("transactions is empty");
+        return await this.mintTx(transactions[0]);
 
       case "deploy":
         if (transactions.length === 0) throw new Error("transactions is empty");
@@ -101,6 +104,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
       default:
         throw new Error(`Unknown task: ${this.cloud.task}`);
     }
+  }
+
+  private stringifyJobResult(result: FungibleTokenJobResult): string {
+    return JSON.stringify(result, null, 2);
   }
 
   private async deployTx(transaction: string): Promise<string> {
@@ -113,7 +120,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
       args.signedData === undefined ||
       args.tokenPublicKey === undefined ||
       args.uri === undefined ||
-      args.symbol === undefined
+      args.symbol === undefined ||
+      args.sendTransaction === undefined
     ) {
       throw new Error("One or more required args are undefined");
     }
@@ -188,6 +196,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       signedJson
     );
     await tx.prove();
+    const txJSON = tx.toJSON();
 
     if (tx === undefined) throw new Error("tx is undefined");
     try {
@@ -195,15 +204,253 @@ export class TokenLauncherWorker extends zkCloudWorker {
       await tx.prove();
       console.timeEnd("proved tx");
       console.timeEnd("prepared tx");
-      const result = JSON.stringify(
-        { success: true, tx: tx.toJSON() },
-        null,
-        2
-      );
-      return result;
+
+      if (!args.sendTransaction) {
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+        });
+      }
+
+      let txSent;
+      let sent = false;
+      while (!sent) {
+        txSent = await tx.safeSend();
+        if (txSent.status == "pending") {
+          sent = true;
+          console.log(
+            `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
+          );
+        } else if (this.cloud.chain === "zeko") {
+          console.log("Retrying Zeko tx");
+          await sleep(10000);
+        } else {
+          console.log(
+            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`,
+            txSent.errors
+          );
+          return this.stringifyJobResult({
+            success: false,
+            tx: txJSON,
+            hash: txSent.hash,
+            error: String(txSent.errors),
+          });
+        }
+      }
+      if (this.cloud.isLocalCloud && txSent?.status === "pending") {
+        const txIncluded = await txSent.safeWait();
+        console.log(
+          `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
+        );
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+          hash: txIncluded.hash,
+        });
+      }
+      if (txSent?.hash)
+        this.cloud.publishTransactionMetadata({
+          txId: txSent?.hash,
+          metadata: {
+            admin: sender.toBase58(),
+            contractAddress: contractAddress.toBase58(),
+            adminContractAddress: adminContractPublicKey.toBase58(),
+            type: "deploy",
+          } as any,
+        });
+      return this.stringifyJobResult({
+        success:
+          txSent?.hash !== undefined && txSent?.status == "pending"
+            ? true
+            : false,
+        tx: txJSON,
+        hash: txSent?.hash,
+        error: String(txSent?.errors ?? ""),
+      });
     } catch (error) {
       console.error("Error sending transaction", error);
-      return "Error sending transaction";
+      return this.stringifyJobResult({
+        success: false,
+        tx: txJSON,
+        error: String(error),
+      });
+    }
+  }
+
+  private async mintTx(transaction: string): Promise<string> {
+    const args: FungibleTokenMintParams = JSON.parse(transaction);
+    if (
+      args.adminContractPublicKey === undefined ||
+      args.adminPublicKey === undefined ||
+      args.chain === undefined ||
+      args.serializedTransaction === undefined ||
+      args.signedData === undefined ||
+      args.tokenPublicKey === undefined ||
+      args.symbol === undefined ||
+      args.sendTransaction === undefined ||
+      args.amount === undefined ||
+      args.to === undefined
+    ) {
+      throw new Error("One or more required args are undefined");
+    }
+
+    const contractAddress = PublicKey.fromBase58(args.tokenPublicKey);
+    console.log("Contract", contractAddress.toBase58());
+    const adminContractPublicKey = PublicKey.fromBase58(
+      args.adminContractPublicKey
+    );
+    console.log("Admin Contract", adminContractPublicKey.toBase58());
+    const wallet = PublicKey.fromBase58(WALLET);
+    const zkToken = new FungibleToken(contractAddress);
+    const tokenId = zkToken.deriveTokenId();
+    const zkAdmin = new FungibleTokenAdmin(adminContractPublicKey);
+    const to = PublicKey.fromBase58(args.to);
+    const amount = UInt64.from(args.amount);
+    await this.compile({ compileAdmin: true });
+
+    console.log(`Preparing tx...`);
+    console.time("prepared tx");
+    const signedJson = JSON.parse(args.signedData);
+
+    const { fee, sender, nonce, memo } = transactionParams(
+      args.serializedTransaction,
+      signedJson
+    );
+    console.log("Admin (sender)", sender.toBase58());
+
+    if (sender.toBase58() != args.adminPublicKey)
+      throw new Error("Invalid sender");
+    await fetchMinaAccount({
+      publicKey: sender,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: contractAddress,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: adminContractPublicKey,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: contractAddress,
+      tokenId,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: to,
+      tokenId,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: wallet,
+      force: true,
+    });
+
+    if (!Mina.hasAccount(sender)) {
+      console.error("Sender does not have account");
+      return "Sender does not have account";
+    }
+
+    console.log("Sender balance:", await accountBalanceMina(sender));
+    const isNewAccount = Mina.hasAccount(to, tokenId) === false;
+
+    const txNew = await Mina.transaction(
+      { sender, fee, memo, nonce },
+      async () => {
+        if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
+        const provingFee = AccountUpdate.createSigned(sender);
+        provingFee.send({
+          to: PublicKey.fromBase58(WALLET),
+          amount: UInt64.from(MINT_FEE),
+        });
+        await zkToken.mint(to, amount);
+      }
+    );
+    const tx = deserializeTransaction(
+      args.serializedTransaction,
+      txNew,
+      signedJson
+    );
+    await tx.prove();
+    const txJSON = tx.toJSON();
+
+    if (tx === undefined) throw new Error("tx is undefined");
+    try {
+      console.time("proved tx");
+      await tx.prove();
+      console.timeEnd("proved tx");
+      console.timeEnd("prepared tx");
+
+      if (!args.sendTransaction) {
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+        });
+      }
+
+      let txSent;
+      let sent = false;
+      while (!sent) {
+        txSent = await tx.safeSend();
+        if (txSent.status == "pending") {
+          sent = true;
+          console.log(
+            `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
+          );
+        } else if (this.cloud.chain === "zeko") {
+          console.log("Retrying Zeko tx");
+          await sleep(10000);
+        } else {
+          console.log(
+            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`,
+            txSent.errors
+          );
+          return this.stringifyJobResult({
+            success: false,
+            tx: txJSON,
+            hash: txSent.hash,
+            error: String(txSent.errors),
+          });
+        }
+      }
+      if (this.cloud.isLocalCloud && txSent?.status === "pending") {
+        const txIncluded = await txSent.safeWait();
+        console.log(
+          `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
+        );
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+          hash: txIncluded.hash,
+        });
+      }
+      if (txSent?.hash)
+        this.cloud.publishTransactionMetadata({
+          txId: txSent?.hash,
+          metadata: {
+            admin: sender.toBase58(),
+            contractAddress: contractAddress.toBase58(),
+            adminContractAddress: adminContractPublicKey.toBase58(),
+            type: "deploy",
+          } as any,
+        });
+      return this.stringifyJobResult({
+        success:
+          txSent?.hash !== undefined && txSent?.status == "pending"
+            ? true
+            : false,
+        tx: txJSON,
+        hash: txSent?.hash,
+        error: String(txSent?.errors ?? ""),
+      });
+    } catch (error) {
+      console.error("Error sending transaction", error);
+      return this.stringifyJobResult({
+        success: false,
+        tx: txJSON,
+        error: String(error),
+      });
     }
   }
 
@@ -337,6 +584,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     }
   }
 
+  /*
   private async mintTx(args: {
     amount: number;
     contractAddress: string;
@@ -494,4 +742,5 @@ export class TokenLauncherWorker extends zkCloudWorker {
       return "Error sending transaction";
     }
   }
+  */
 }
