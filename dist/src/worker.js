@@ -1,11 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TokenLauncherWorker = void 0;
+exports.deserializeTinyTransaction = exports.tinyTransactionParams = exports.TokenLauncherWorker = void 0;
 const zkcloudworker_1 = require("zkcloudworker");
 const o1js_1 = require("o1js");
 const env_json_1 = require("../env.json");
 const MINT_FEE = 1e8;
 const ISSUE_FEE = 1e9;
+const TRANSFER_FEE = 1e8;
 class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
     constructor(cloud) {
         super(cloud);
@@ -46,12 +47,15 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
         throw new Error("Method not implemented.");
     }
     async execute(transactions) {
-        if (this.cloud.args === undefined)
-            throw new Error("this.cloud.args is undefined");
-        const args = JSON.parse(this.cloud.args);
         switch (this.cloud.task) {
+            case "tiny":
+                if (transactions.length === 0)
+                    throw new Error("transactions is empty");
+                return await this.tinyTx(transactions[0]);
             case "transfer":
-                return await this.transferTx(args);
+                if (transactions.length === 0)
+                    throw new Error("transactions is empty");
+                return await this.transferTx(transactions[0]);
             case "mint":
                 if (transactions.length === 0)
                     throw new Error("transactions is empty");
@@ -265,7 +269,7 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             return "Sender does not have account";
         }
         console.log("Sender balance:", await (0, zkcloudworker_1.accountBalanceMina)(sender));
-        const isNewAccount = o1js_1.Mina.hasAccount(to, tokenId);
+        const isNewAccount = o1js_1.Mina.hasAccount(to, tokenId) === false;
         const txNew = await o1js_1.Mina.transaction({ sender, fee, memo, nonce }, async () => {
             if (isNewAccount)
                 o1js_1.AccountUpdate.fundNewAccount(sender, 1);
@@ -330,7 +334,9 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
                         admin: sender.toBase58(),
                         contractAddress: contractAddress.toBase58(),
                         adminContractAddress: adminContractPublicKey.toBase58(),
-                        type: "deploy",
+                        to: to.toBase58(),
+                        amount: amount.toBigInt().toString(),
+                        type: "mint",
                     },
                 });
             return this.stringifyJobResult({
@@ -351,80 +357,98 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             });
         }
     }
-    async transferTx(args) {
-        if (args.amount === undefined)
-            throw new Error("args.amount is undefined");
-        if (args.contractAddress === undefined)
-            throw new Error("args.contractAddress is undefined");
-        if (args.from === undefined)
-            throw new Error("args.from is undefined");
-        if (args.to === undefined)
-            throw new Error("args.to is undefined");
-        const privateKey = o1js_1.PrivateKey.fromBase58(args.from);
-        const sender = privateKey.toPublicKey();
-        console.log("Sender", sender.toBase58());
-        const receiver = o1js_1.PublicKey.fromBase58(args.to);
-        console.log("Receiver", receiver.toBase58());
-        const contractAddress = o1js_1.PublicKey.fromBase58(args.contractAddress);
+    async transferTx(transaction) {
+        const args = JSON.parse(transaction);
+        if (args.chain === undefined ||
+            args.serializedTransaction === undefined ||
+            args.signedData === undefined ||
+            args.tokenPublicKey === undefined ||
+            args.symbol === undefined ||
+            args.sendTransaction === undefined ||
+            args.amount === undefined ||
+            args.to === undefined ||
+            args.from === undefined) {
+            throw new Error("One or more required args are undefined");
+        }
+        const contractAddress = o1js_1.PublicKey.fromBase58(args.tokenPublicKey);
         console.log("Contract", contractAddress.toBase58());
+        const wallet = o1js_1.PublicKey.fromBase58(env_json_1.WALLET);
+        const zkToken = new zkcloudworker_1.FungibleToken(contractAddress);
+        const tokenId = zkToken.deriveTokenId();
+        const from = o1js_1.PublicKey.fromBase58(args.from);
+        const to = o1js_1.PublicKey.fromBase58(args.to);
         const amount = o1js_1.UInt64.from(args.amount);
-        console.log("Amount", amount.toBigInt().toString());
-        const zkApp = new zkcloudworker_1.FungibleToken(contractAddress);
-        await this.compile();
-        console.log(`Sending tx...`);
+        await this.compile({ compileAdmin: true });
+        console.log(`Preparing tx...`);
         console.time("prepared tx");
-        const memo = "send token";
-        const tokenId = zkApp.deriveTokenId();
+        const signedJson = JSON.parse(args.signedData);
+        const { fee, sender, nonce, memo } = (0, zkcloudworker_1.transactionParams)(args.serializedTransaction, signedJson);
+        console.log("Sender:", sender.toBase58());
+        if (sender.toBase58() != from.toBase58())
+            throw new Error("Invalid sender");
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: sender,
+            force: true,
+        });
         await (0, zkcloudworker_1.fetchMinaAccount)({
             publicKey: contractAddress,
             force: true,
         });
         await (0, zkcloudworker_1.fetchMinaAccount)({
-            publicKey: sender,
-            force: true,
-        });
-        await (0, zkcloudworker_1.fetchMinaAccount)({
-            publicKey: sender,
+            publicKey: contractAddress,
             tokenId,
             force: true,
         });
         await (0, zkcloudworker_1.fetchMinaAccount)({
-            publicKey: receiver,
+            publicKey: to,
             tokenId,
-            force: false,
+            force: true,
         });
-        const isNewAccount = o1js_1.Mina.hasAccount(receiver, tokenId) ? false : true;
-        if (!o1js_1.Mina.hasAccount(contractAddress)) {
-            console.error("Contract does not have account");
-            return "Contract does not have account";
-        }
-        if (!o1js_1.Mina.hasAccount(sender, tokenId)) {
-            console.error("Sender does not have account for this token");
-            return "Sender does not have account for this token";
-        }
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: from,
+            tokenId,
+            force: true,
+        });
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: from,
+            force: true,
+        });
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: wallet,
+            force: true,
+        });
         if (!o1js_1.Mina.hasAccount(sender)) {
             console.error("Sender does not have account");
             return "Sender does not have account";
         }
         console.log("Sender balance:", await (0, zkcloudworker_1.accountBalanceMina)(sender));
-        const tx = await o1js_1.Mina.transaction({
-            sender,
-            memo,
-            fee: await (0, zkcloudworker_1.fee)(),
-        }, async () => {
-            if (isNewAccount) {
-                o1js_1.AccountUpdate.fundNewAccount(sender);
-            }
-            await zkApp.transfer(sender, receiver, amount);
+        const isNewAccount = o1js_1.Mina.hasAccount(to, tokenId) === false;
+        const txNew = await o1js_1.Mina.transaction({ sender, fee, memo, nonce }, async () => {
+            if (isNewAccount)
+                o1js_1.AccountUpdate.fundNewAccount(sender, 1);
+            const provingFee = o1js_1.AccountUpdate.createSigned(sender);
+            provingFee.send({
+                to: o1js_1.PublicKey.fromBase58(env_json_1.WALLET),
+                amount: o1js_1.UInt64.from(TRANSFER_FEE),
+            });
+            await zkToken.transfer(from, to, amount);
         });
+        const tx = (0, zkcloudworker_1.deserializeTransaction)(args.serializedTransaction, txNew, signedJson);
+        await tx.prove();
+        const txJSON = tx.toJSON();
         if (tx === undefined)
             throw new Error("tx is undefined");
-        tx.sign([privateKey]);
         try {
             console.time("proved tx");
             await tx.prove();
             console.timeEnd("proved tx");
             console.timeEnd("prepared tx");
+            if (!args.sendTransaction) {
+                return this.stringifyJobResult({
+                    success: true,
+                    tx: txJSON,
+                });
+            }
             let txSent;
             let sent = false;
             while (!sent) {
@@ -438,34 +462,199 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
                     await (0, zkcloudworker_1.sleep)(10000);
                 }
                 else {
-                    console.log(`${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`);
-                    return "Error sending transaction";
+                    console.log(`${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`, txSent.errors);
+                    return this.stringifyJobResult({
+                        success: false,
+                        tx: txJSON,
+                        hash: txSent.hash,
+                        error: String(txSent.errors),
+                    });
                 }
             }
             if (this.cloud.isLocalCloud && txSent?.status === "pending") {
                 const txIncluded = await txSent.safeWait();
                 console.log(`${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`);
-                return txIncluded.hash;
+                return this.stringifyJobResult({
+                    success: true,
+                    tx: txJSON,
+                    hash: txIncluded.hash,
+                });
             }
             if (txSent?.hash)
                 this.cloud.publishTransactionMetadata({
                     txId: txSent?.hash,
                     metadata: {
-                        sender: sender.toBase58(),
-                        receiver: receiver.toBase58(),
-                        amount: amount.toBigInt().toString(),
+                        admin: sender.toBase58(),
                         contractAddress: contractAddress.toBase58(),
+                        from: from.toBase58(),
+                        to: to.toBase58(),
+                        amount: amount.toBigInt().toString(),
                         type: "transfer",
                     },
                 });
-            return txSent?.hash ?? "Error sending transaction";
+            return this.stringifyJobResult({
+                success: txSent?.hash !== undefined && txSent?.status == "pending"
+                    ? true
+                    : false,
+                tx: txJSON,
+                hash: txSent?.hash,
+                error: String(txSent?.errors ?? ""),
+            });
         }
         catch (error) {
             console.error("Error sending transaction", error);
-            return "Error sending transaction";
+            return this.stringifyJobResult({
+                success: false,
+                tx: txJSON,
+                error: String(error),
+            });
+        }
+    }
+    async tinyTx(transaction) {
+        const args = JSON.parse(transaction);
+        if (args.sender === undefined ||
+            args.contractAddress === undefined ||
+            args.chain === undefined ||
+            args.serializedTransaction === undefined ||
+            args.sendTransaction === undefined ||
+            args.value === undefined) {
+            throw new Error("One or more required args are undefined");
+        }
+        const contractAddress = o1js_1.PublicKey.fromBase58(args.contractAddress);
+        console.log("Contract", contractAddress.toBase58());
+        const zkApp = new zkcloudworker_1.TinyContract(contractAddress);
+        const value = (0, o1js_1.Field)(args.value);
+        await zkcloudworker_1.TinyContract.compile({ cache: this.cache });
+        console.log(`Preparing tx...`);
+        console.time("prepared tx");
+        const { fee, sender, nonce, memo } = tinyTransactionParams(args.serializedTransaction);
+        console.log("Sender:", sender.toBase58());
+        if (sender.toBase58() != args.sender)
+            throw new Error("Invalid sender");
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: sender,
+            force: true,
+        });
+        await (0, zkcloudworker_1.fetchMinaAccount)({
+            publicKey: contractAddress,
+            force: true,
+        });
+        if (!o1js_1.Mina.hasAccount(sender)) {
+            console.error("Sender does not have account");
+            return "Sender does not have account";
+        }
+        console.log("Sender balance:", await (0, zkcloudworker_1.accountBalanceMina)(sender));
+        const txNew = await o1js_1.Mina.transaction({ sender, fee, memo, nonce }, async () => {
+            await zkApp.setValue(value);
+        });
+        const tx = deserializeTinyTransaction(args.serializedTransaction, txNew);
+        await tx.prove();
+        const txJSON = tx.toJSON();
+        if (tx === undefined)
+            throw new Error("tx is undefined");
+        try {
+            console.time("proved tx");
+            await tx.prove();
+            console.timeEnd("proved tx");
+            console.timeEnd("prepared tx");
+            if (!args.sendTransaction) {
+                return this.stringifyJobResult({
+                    success: true,
+                    tx: txJSON,
+                });
+            }
+            let txSent;
+            let sent = false;
+            while (!sent) {
+                txSent = await tx.safeSend();
+                if (txSent.status == "pending") {
+                    sent = true;
+                    console.log(`${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`);
+                }
+                else if (this.cloud.chain === "zeko") {
+                    console.log("Retrying Zeko tx");
+                    await (0, zkcloudworker_1.sleep)(10000);
+                }
+                else {
+                    console.log(`${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`, txSent.errors);
+                    return this.stringifyJobResult({
+                        success: false,
+                        tx: txJSON,
+                        hash: txSent.hash,
+                        error: String(txSent.errors),
+                    });
+                }
+            }
+            if (this.cloud.isLocalCloud && txSent?.status === "pending") {
+                const txIncluded = await txSent.safeWait();
+                console.log(`${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`);
+                return this.stringifyJobResult({
+                    success: true,
+                    tx: txJSON,
+                    hash: txIncluded.hash,
+                });
+            }
+            if (txSent?.hash)
+                this.cloud.publishTransactionMetadata({
+                    txId: txSent?.hash,
+                    metadata: {
+                        admin: sender.toBase58(),
+                        contractAddress: contractAddress.toBase58(),
+                        value: value.toBigInt().toString(),
+                        type: "tiny",
+                    },
+                });
+            return this.stringifyJobResult({
+                success: txSent?.hash !== undefined && txSent?.status == "pending"
+                    ? true
+                    : false,
+                tx: txJSON,
+                hash: txSent?.hash,
+                error: String(txSent?.errors ?? ""),
+            });
+        }
+        catch (error) {
+            console.error("Error sending transaction", error);
+            return this.stringifyJobResult({
+                success: false,
+                tx: txJSON,
+                error: String(error),
+            });
         }
     }
 }
 exports.TokenLauncherWorker = TokenLauncherWorker;
 TokenLauncherWorker.contractVerificationKey = undefined;
 TokenLauncherWorker.contractAdminVerificationKey = undefined;
+function tinyTransactionParams(serializedTransaction) {
+    const { sender, nonce, tx, fee } = JSON.parse(serializedTransaction);
+    const transaction = o1js_1.Mina.Transaction.fromJSON(JSON.parse(tx));
+    const memo = transaction.transaction.memo;
+    return {
+        fee,
+        sender: o1js_1.PublicKey.fromBase58(sender),
+        nonce,
+        memo,
+    };
+}
+exports.tinyTransactionParams = tinyTransactionParams;
+function deserializeTinyTransaction(serializedTransaction, txNew) {
+    //console.log("new transaction", txNew);
+    const { tx, blindingValues, length } = JSON.parse(serializedTransaction);
+    const transaction = o1js_1.Mina.Transaction.fromJSON(JSON.parse(tx));
+    //console.log("transaction", transaction);
+    if (length !== txNew.transaction.accountUpdates.length) {
+        throw new Error("New Transaction length mismatch");
+    }
+    if (length !== transaction.transaction.accountUpdates.length) {
+        throw new Error("Serialized Transaction length mismatch");
+    }
+    for (let i = 0; i < length; i++) {
+        transaction.transaction.accountUpdates[i].lazyAuthorization =
+            txNew.transaction.accountUpdates[i].lazyAuthorization;
+        if (blindingValues[i] !== "")
+            transaction.transaction.accountUpdates[i].lazyAuthorization.blindingValue = o1js_1.Field.fromJSON(blindingValues[i]);
+    }
+    return transaction;
+}
+exports.deserializeTinyTransaction = deserializeTinyTransaction;

@@ -13,6 +13,7 @@ import {
   FungibleTokenJobResult,
   transactionParams,
   deserializeTransaction,
+  TinyContract,
 } from "zkcloudworker";
 import {
   VerificationKey,
@@ -24,11 +25,22 @@ import {
   UInt64,
   UInt8,
   Bool,
+  Field,
+  Transaction,
 } from "o1js";
 import { WALLET } from "../env.json";
 const MINT_FEE = 1e8;
 const ISSUE_FEE = 1e9;
 const TRANSFER_FEE = 1e8;
+
+interface TinyTransactionParams {
+  chain: string;
+  contractAddress: string;
+  serializedTransaction: string;
+  sender: string;
+  value: number;
+  sendTransaction: boolean;
+}
 export class TokenLauncherWorker extends zkCloudWorker {
   static contractVerificationKey: VerificationKey | undefined = undefined;
   static contractAdminVerificationKey: VerificationKey | undefined = undefined;
@@ -87,6 +99,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   public async execute(transactions: string[]): Promise<string | undefined> {
     switch (this.cloud.task) {
+      case "tiny":
+        if (transactions.length === 0) throw new Error("transactions is empty");
+        return await this.tinyTx(transactions[0]);
+
       case "transfer":
         if (transactions.length === 0) throw new Error("transactions is empty");
         return await this.transferTx(transactions[0]);
@@ -632,4 +648,180 @@ export class TokenLauncherWorker extends zkCloudWorker {
       });
     }
   }
+
+  private async tinyTx(transaction: string): Promise<string> {
+    const args: TinyTransactionParams = JSON.parse(transaction);
+    if (
+      args.sender === undefined ||
+      args.contractAddress === undefined ||
+      args.chain === undefined ||
+      args.serializedTransaction === undefined ||
+      args.sendTransaction === undefined ||
+      args.value === undefined
+    ) {
+      throw new Error("One or more required args are undefined");
+    }
+
+    const contractAddress = PublicKey.fromBase58(args.contractAddress);
+    console.log("Contract", contractAddress.toBase58());
+
+    const zkApp = new TinyContract(contractAddress);
+    const value = Field(args.value);
+    await TinyContract.compile({ cache: this.cache });
+
+    console.log(`Preparing tx...`);
+    console.time("prepared tx");
+
+    const { fee, sender, nonce, memo } = tinyTransactionParams(
+      args.serializedTransaction
+    );
+    console.log("Sender:", sender.toBase58());
+
+    if (sender.toBase58() != args.sender) throw new Error("Invalid sender");
+    await fetchMinaAccount({
+      publicKey: sender,
+      force: true,
+    });
+    await fetchMinaAccount({
+      publicKey: contractAddress,
+      force: true,
+    });
+
+    if (!Mina.hasAccount(sender)) {
+      console.error("Sender does not have account");
+      return "Sender does not have account";
+    }
+
+    console.log("Sender balance:", await accountBalanceMina(sender));
+
+    const txNew = await Mina.transaction(
+      { sender, fee, memo, nonce },
+      async () => {
+        await zkApp.setValue(value);
+      }
+    );
+    const tx = deserializeTinyTransaction(args.serializedTransaction, txNew);
+    await tx.prove();
+    const txJSON = tx.toJSON();
+
+    if (tx === undefined) throw new Error("tx is undefined");
+    try {
+      console.time("proved tx");
+      await tx.prove();
+      console.timeEnd("proved tx");
+      console.timeEnd("prepared tx");
+
+      if (!args.sendTransaction) {
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+        });
+      }
+
+      let txSent;
+      let sent = false;
+      while (!sent) {
+        txSent = await tx.safeSend();
+        if (txSent.status == "pending") {
+          sent = true;
+          console.log(
+            `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
+          );
+        } else if (this.cloud.chain === "zeko") {
+          console.log("Retrying Zeko tx");
+          await sleep(10000);
+        } else {
+          console.log(
+            `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`,
+            txSent.errors
+          );
+          return this.stringifyJobResult({
+            success: false,
+            tx: txJSON,
+            hash: txSent.hash,
+            error: String(txSent.errors),
+          });
+        }
+      }
+      if (this.cloud.isLocalCloud && txSent?.status === "pending") {
+        const txIncluded = await txSent.safeWait();
+        console.log(
+          `${memo} tx included into block: hash: ${txIncluded.hash} status: ${txIncluded.status}`
+        );
+        return this.stringifyJobResult({
+          success: true,
+          tx: txJSON,
+          hash: txIncluded.hash,
+        });
+      }
+      if (txSent?.hash)
+        this.cloud.publishTransactionMetadata({
+          txId: txSent?.hash,
+          metadata: {
+            admin: sender.toBase58(),
+            contractAddress: contractAddress.toBase58(),
+            value: value.toBigInt().toString(),
+            type: "tiny",
+          } as any,
+        });
+      return this.stringifyJobResult({
+        success:
+          txSent?.hash !== undefined && txSent?.status == "pending"
+            ? true
+            : false,
+        tx: txJSON,
+        hash: txSent?.hash,
+        error: String(txSent?.errors ?? ""),
+      });
+    } catch (error) {
+      console.error("Error sending transaction", error);
+      return this.stringifyJobResult({
+        success: false,
+        tx: txJSON,
+        error: String(error),
+      });
+    }
+  }
+}
+
+export function tinyTransactionParams(serializedTransaction: string): {
+  fee: UInt64;
+  sender: PublicKey;
+  nonce: number;
+  memo: string;
+} {
+  const { sender, nonce, tx, fee } = JSON.parse(serializedTransaction);
+  const transaction = Mina.Transaction.fromJSON(JSON.parse(tx));
+  const memo = transaction.transaction.memo;
+  return {
+    fee,
+    sender: PublicKey.fromBase58(sender),
+    nonce,
+    memo,
+  };
+}
+
+export function deserializeTinyTransaction(
+  serializedTransaction: string,
+  txNew: Mina.Transaction<false, false>
+): Transaction<false, true> {
+  //console.log("new transaction", txNew);
+  const { tx, blindingValues, length } = JSON.parse(serializedTransaction);
+  const transaction = Mina.Transaction.fromJSON(JSON.parse(tx));
+  //console.log("transaction", transaction);
+  if (length !== txNew.transaction.accountUpdates.length) {
+    throw new Error("New Transaction length mismatch");
+  }
+  if (length !== transaction.transaction.accountUpdates.length) {
+    throw new Error("Serialized Transaction length mismatch");
+  }
+  for (let i = 0; i < length; i++) {
+    transaction.transaction.accountUpdates[i].lazyAuthorization =
+      txNew.transaction.accountUpdates[i].lazyAuthorization;
+    if (blindingValues[i] !== "")
+      (
+        transaction.transaction.accountUpdates[i].lazyAuthorization as any
+      ).blindingValue = Field.fromJSON(blindingValues[i]);
+  }
+  return transaction;
 }
