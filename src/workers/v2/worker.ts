@@ -28,7 +28,7 @@ import {
   Field,
   Transaction,
 } from "o1js";
-import { WALLET } from "../env.json";
+import { WALLET } from "../../../env.json";
 const MINT_FEE = 1e8;
 const ISSUE_FEE = 1e9;
 const TRANSFER_FEE = 1e8;

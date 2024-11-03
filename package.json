@@ -7,6 +7,7 @@
     "compile": "jest worker.test --chain=local --cloud=local --compile=true --deploy=false --mint=false --transfer=false",
     "local": "jest worker.test --chain=local --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
     "lightnet": "jest worker.test --chain=lightnet --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
+    "two": "jest worker.test --chain=devnet --cloud=local --compile=false --deploy=true --mint=false --transfer=false",
     "devnet.local": "jest worker.test --chain=devnet --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
     "devnet.zkcloudworker": "jest worker.test --chain=devnet --cloud=zkcloudworker --compile=false --deploy=true --mint=true --transfer=true",
     "zeko.local": "jest worker.test --chain=zeko --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
@@ -18,12 +19,16 @@
     "@types/node": "^22.8.7",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
     "typescript": "^5.6.3"
   },
   "packageManager": "yarn@4.4.0",
   "dependencies": {
     "arweave": "^1.15.5",
+    "bullmq": "^5.23.0",
     "o1js": "2.0.0",
+    "o1js_v1": "npm:o1js@1.9.1",
+    "redis": "^4.7.0",
     "zkcloudworker": "^0.16.4"
   },
   "jest": {
