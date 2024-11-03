@@ -1,9 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import {
-  PrivateKey,
   Mina,
   AccountUpdate,
-  VerificationKey,
   UInt64,
   Cache,
   PublicKey,
@@ -15,23 +13,16 @@ import {
 
 import {
   TokenAPI,
-  FungibleTokenDeployParams,
-  FungibleTokenAdminDeployProps,
-  FungibleTokenJobResult,
-  FungibleTokenErrors,
-  FungibleTokenTransferParams,
-  blockchain,
   sleep,
   Memory,
   fetchMinaAccount,
   fee,
   initBlockchain,
-  serializeFields,
   accountBalanceMina,
   FungibleToken,
   FungibleTokenAdmin,
-  VerificationData,
   serializeTransaction,
+  fungibleTokenVerificationKeys,
 } from "zkcloudworker";
 import { zkcloudworker } from "..";
 import { JWT } from "../env.json";
@@ -41,7 +32,6 @@ import {
   adminContractKey,
   wallet,
 } from "./config";
-import { verificationKeys } from "./vk";
 import { processArguments, sendTx, getTxStatusFast } from "./utils";
 
 const { TestPublicKey } = Mina;
@@ -137,12 +127,12 @@ describe("Token Launchpad Worker", () => {
         {
           name: "FungibleToken",
           result: await FungibleToken.analyzeMethods(),
-          skip: true,
+          skip: false,
         },
         {
           name: "FungibleTokenAdmin",
           result: await FungibleTokenAdmin.analyzeMethods(),
-          skip: true,
+          skip: false,
         },
       ];
       console.timeEnd("methods analyzed");
@@ -180,23 +170,27 @@ describe("Token Launchpad Worker", () => {
       console.timeEnd("FungibleToken compiled");
       console.timeEnd("compiled");
       Memory.info("compiled");
-      const printVerificationKey = false;
+      const printVerificationKey = true;
       if (printVerificationKey) {
         console.log("admin:", {
           hash: adminVerificationKey.hash.toJSON(),
-          data: adminVerificationKey.data,
+          //data: adminVerificationKey.data,
         });
         console.log("token:", {
           hash: tokenVerificationKey.hash.toJSON(),
-          data: tokenVerificationKey.data,
+          //data: tokenVerificationKey.data,
         });
       }
     });
   }
   if (deploy) {
     it(`should deploy contract`, async () => {
+      console.log("deploying contract");
       console.time("deployed");
-      const vk = verificationKeys[chain === "mainnet" ? "mainnet" : "testnet"];
+      const vk =
+        fungibleTokenVerificationKeys[
+          chain === "mainnet" ? "mainnet" : "testnet"
+        ];
       FungibleTokenAdmin._verificationKey = {
         hash: Field(vk.admin.hash),
         data: vk.admin.data,
@@ -243,6 +237,7 @@ describe("Token Launchpad Worker", () => {
       const transaction = tx.toJSON();
       const txJSON = JSON.parse(transaction);
       let signedData = JSON.stringify({ zkappCommand: txJSON });
+      console.log("sending deploy transaction");
       const jobId = await api.sendDeployTransaction({
         serializedTransaction,
         signedData,
