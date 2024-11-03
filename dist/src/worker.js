@@ -132,15 +132,14 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             (0, o1js_1.Bool)(false));
         });
         const tx = (0, zkcloudworker_1.deserializeTransaction)(args.serializedTransaction, txNew, signedJson);
-        await tx.prove();
-        const txJSON = tx.toJSON();
         if (tx === undefined)
             throw new Error("tx is undefined");
+        console.time("proved tx");
+        await tx.prove();
+        console.timeEnd("proved tx");
+        const txJSON = tx.toJSON();
+        console.timeEnd("prepared tx");
         try {
-            console.time("proved tx");
-            await tx.prove();
-            console.timeEnd("proved tx");
-            console.timeEnd("prepared tx");
             if (!args.sendTransaction) {
                 return this.stringifyJobResult({
                     success: true,
@@ -281,15 +280,14 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             await zkToken.mint(to, amount);
         });
         const tx = (0, zkcloudworker_1.deserializeTransaction)(args.serializedTransaction, txNew, signedJson);
-        await tx.prove();
-        const txJSON = tx.toJSON();
         if (tx === undefined)
             throw new Error("tx is undefined");
+        console.time("proved tx");
+        await tx.prove();
+        console.timeEnd("proved tx");
+        const txJSON = tx.toJSON();
+        console.timeEnd("prepared tx");
         try {
-            console.time("proved tx");
-            await tx.prove();
-            console.timeEnd("proved tx");
-            console.timeEnd("prepared tx");
             if (!args.sendTransaction) {
                 return this.stringifyJobResult({
                     success: true,
@@ -434,15 +432,14 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             await zkToken.transfer(from, to, amount);
         });
         const tx = (0, zkcloudworker_1.deserializeTransaction)(args.serializedTransaction, txNew, signedJson);
-        await tx.prove();
-        const txJSON = tx.toJSON();
         if (tx === undefined)
             throw new Error("tx is undefined");
+        console.time("proved tx");
+        await tx.prove();
+        console.timeEnd("proved tx");
+        const txJSON = tx.toJSON();
+        console.timeEnd("prepared tx");
         try {
-            console.time("proved tx");
-            await tx.prove();
-            console.timeEnd("proved tx");
-            console.timeEnd("prepared tx");
             if (!args.sendTransaction) {
                 return this.stringifyJobResult({
                     success: true,
@@ -548,15 +545,14 @@ class TokenLauncherWorker extends zkcloudworker_1.zkCloudWorker {
             await zkApp.setValue(value);
         });
         const tx = deserializeTinyTransaction(args.serializedTransaction, txNew);
-        await tx.prove();
-        const txJSON = tx.toJSON();
         if (tx === undefined)
             throw new Error("tx is undefined");
+        console.time("proved tx");
+        await tx.prove();
+        console.timeEnd("proved tx");
+        const txJSON = tx.toJSON();
+        console.timeEnd("prepared tx");
         try {
-            console.time("proved tx");
-            await tx.prove();
-            console.timeEnd("proved tx");
-            console.timeEnd("prepared tx");
             if (!args.sendTransaction) {
                 return this.stringifyJobResult({
                     success: true,

@@ -1,9 +1,10 @@
 {
   "name": "token-launchpad",
-  "version": "0.2.7",
+  "version": "0.3.1",
   "author": "DFST",
   "scripts": {
     "test": "jest",
+    "compile": "jest worker.test --chain=local --cloud=local --compile=true --deploy=false --mint=false --transfer=false",
     "local": "jest worker.test --chain=local --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
     "lightnet": "jest worker.test --chain=lightnet --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
     "devnet.local": "jest worker.test --chain=devnet --cloud=local --compile=false --deploy=true --mint=true --transfer=true",
@@ -13,8 +14,8 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "@types/jest": "^29.5.13",
-    "@types/node": "^22.7.5",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.8.7",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "typescript": "^5.6.3"
@@ -22,8 +23,8 @@
   "packageManager": "yarn@4.4.0",
   "dependencies": {
     "arweave": "^1.15.5",
-    "o1js": "^1.8.0",
-    "zkcloudworker": "^0.14.9"
+    "o1js": "2.0.0",
+    "zkcloudworker": "^0.16.4"
   },
   "jest": {
     "preset": "ts-jest",
