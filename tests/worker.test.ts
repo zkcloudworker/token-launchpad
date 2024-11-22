@@ -209,9 +209,10 @@ describe("Token Launchpad Worker", () => {
       const tx = await Mina.transaction(
         { sender: admin, fee: await fee(), memo, nonce },
         async () => {
-          AccountUpdate.fundNewAccount(admin, 3);
-          const provingFee = AccountUpdate.createSigned(admin);
-          provingFee.send({
+          //AccountUpdate.fundNewAccount(admin, 3);
+          const feeAccountUpdate = AccountUpdate.createSigned(admin);
+          feeAccountUpdate.balance.subInPlace(3_000_000_000);
+          feeAccountUpdate.send({
             to: wallet,
             amount: UInt64.from(ISSUE_FEE),
           });
@@ -326,10 +327,12 @@ describe("Token Launchpad Worker", () => {
             memo,
           },
           async () => {
+            // if (!Mina.hasAccount(to, tokenId))
+            //   AccountUpdate.fundNewAccount(admin, 1);
+            const feeAccountUpdate = AccountUpdate.createSigned(admin);
             if (!Mina.hasAccount(to, tokenId))
-              AccountUpdate.fundNewAccount(admin, 1);
-            const provingFee = AccountUpdate.createSigned(admin);
-            provingFee.send({
+              feeAccountUpdate.balance.subInPlace(1_000_000_000);
+            feeAccountUpdate.send({
               to: wallet,
               amount: UInt64.from(MINT_FEE),
             });
@@ -433,10 +436,12 @@ describe("Token Launchpad Worker", () => {
             memo,
           },
           async () => {
+            // if (!Mina.hasAccount(to, tokenId))
+            //   AccountUpdate.fundNewAccount(from, 1);
+            const feeAccountUpdate = AccountUpdate.createSigned(from);
             if (!Mina.hasAccount(to, tokenId))
-              AccountUpdate.fundNewAccount(from, 1);
-            const provingFee = AccountUpdate.createSigned(from);
-            provingFee.send({
+              feeAccountUpdate.balance.subInPlace(1_000_000_000);
+            feeAccountUpdate.send({
               to: wallet,
               amount: UInt64.from(TRANSFER_FEE),
             });
