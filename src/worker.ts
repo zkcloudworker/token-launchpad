@@ -29,8 +29,9 @@ import {
   Transaction,
 } from "o1js";
 import { WALLET } from "../env.json";
-const MINT_FEE = 1e8;
+
 const ISSUE_FEE = 1e9;
+const MINT_FEE = 1e8;
 const TRANSFER_FEE = 1e8;
 
 interface TinyTransactionParams {
@@ -149,6 +150,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const wallet = PublicKey.fromBase58(WALLET);
     const zkToken = new FungibleToken(contractAddress);
     const zkAdmin = new FungibleTokenAdmin(adminContractPublicKey);
+    const developerAddress = args.developerAddress
+      ? PublicKey.fromBase58(args.developerAddress)
+      : undefined;
+    const developerFee = args.developerFee
+      ? UInt64.from(args.developerFee)
+      : undefined;
     await this.compile({ compileAdmin: true });
 
     console.log(`Preparing tx...`);
@@ -181,12 +188,19 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const txNew = await Mina.transaction(
       { sender, fee, memo, nonce },
       async () => {
-        AccountUpdate.fundNewAccount(sender, 3);
-        const provingFee = AccountUpdate.createSigned(sender);
-        provingFee.send({
+        // AccountUpdate.fundNewAccount(sender, 3);
+        const feeAccountUpdate = AccountUpdate.createSigned(sender);
+        feeAccountUpdate.balance.subInPlace(3_000_000_000);
+        feeAccountUpdate.send({
           to: PublicKey.fromBase58(WALLET),
           amount: UInt64.from(ISSUE_FEE),
         });
+        if (developerAddress && developerFee) {
+          feeAccountUpdate.send({
+            to: developerAddress,
+            amount: developerFee,
+          });
+        }
         await zkAdmin.deploy({ adminPublicKey: sender });
         zkAdmin.account.zkappUri.set(args.uri);
         await zkToken.deploy({
@@ -318,6 +332,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const zkAdmin = new FungibleTokenAdmin(adminContractPublicKey);
     const to = PublicKey.fromBase58(args.to);
     const amount = UInt64.from(args.amount);
+    const developerAddress = args.developerAddress
+      ? PublicKey.fromBase58(args.developerAddress)
+      : undefined;
+    const developerFee = args.developerFee
+      ? UInt64.from(args.developerFee)
+      : undefined;
     await this.compile({ compileAdmin: true });
 
     console.log(`Preparing tx...`);
@@ -370,12 +390,19 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const txNew = await Mina.transaction(
       { sender, fee, memo, nonce },
       async () => {
-        if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
-        const provingFee = AccountUpdate.createSigned(sender);
-        provingFee.send({
+        // if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
+        const feeAccountUpdate = AccountUpdate.createSigned(sender);
+        if (isNewAccount) feeAccountUpdate.balance.subInPlace(1_000_000_000);
+        feeAccountUpdate.send({
           to: PublicKey.fromBase58(WALLET),
           amount: UInt64.from(MINT_FEE),
         });
+        if (developerAddress && developerFee) {
+          feeAccountUpdate.send({
+            to: developerAddress,
+            amount: developerFee,
+          });
+        }
         await zkToken.mint(to, amount);
       }
     );
@@ -490,6 +517,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const from = PublicKey.fromBase58(args.from);
     const to = PublicKey.fromBase58(args.to);
     const amount = UInt64.from(args.amount);
+    const developerAddress = args.developerAddress
+      ? PublicKey.fromBase58(args.developerAddress)
+      : undefined;
+    const developerFee = args.developerFee
+      ? UInt64.from(args.developerFee)
+      : undefined;
     await this.compile({ compileAdmin: true });
 
     console.log(`Preparing tx...`);
@@ -547,12 +580,19 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const txNew = await Mina.transaction(
       { sender, fee, memo, nonce },
       async () => {
-        if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
-        const provingFee = AccountUpdate.createSigned(sender);
-        provingFee.send({
+        // if (isNewAccount) AccountUpdate.fundNewAccount(sender, 1);
+        const feeAccountUpdate = AccountUpdate.createSigned(sender);
+        if (isNewAccount) feeAccountUpdate.balance.subInPlace(1_000_000_000);
+        feeAccountUpdate.send({
           to: PublicKey.fromBase58(WALLET),
           amount: UInt64.from(TRANSFER_FEE),
         });
+        if (developerAddress && developerFee) {
+          feeAccountUpdate.send({
+            to: developerAddress,
+            amount: developerFee,
+          });
+        }
         await zkToken.transfer(from, to, amount);
       }
     );

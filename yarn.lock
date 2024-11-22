@@ -860,12 +860,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.8.7":
-  version: 22.8.7
-  resolution: "@types/node@npm:22.8.7"
+"@types/node@npm:^22.9.1":
+  version: 22.9.1
+  resolution: "@types/node@npm:22.9.1"
   dependencies:
     undici-types: "npm:~6.19.8"
-  checksum: 10c0/14372885db80059ed6e92c320b2bcd8f7dc271698adce11f51aa0f424a3f82aa1749a4f66321b87043791b894346b2458d514cbb65ce70167c2fd8a78a124947
+  checksum: 10c0/ea489ae603aa8874e4e88980aab6f2dad09c755da779c88dd142983bfe9609803c89415ca7781f723072934066f63daf2b3339ef084a8ad1a8079cf3958be243
   languageName: node
   linkType: hard
 
@@ -3004,9 +3004,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"o1js@npm:2.0.0":
-  version: 2.0.0
-  resolution: "o1js@npm:2.0.0"
+"o1js@npm:2.1.0":
+  version: 2.1.0
+  resolution: "o1js@npm:2.1.0"
   dependencies:
     blakejs: "npm:1.2.1"
     cachedir: "npm:^2.4.0"
@@ -3016,7 +3016,7 @@ __metadata:
     tslib: "npm:^2.3.0"
   bin:
     snarky-run: src/build/run.js
-  checksum: 10c0/29f848e834e9eaf4e6982e291f95779b677015952b82ec39b19b07a416f014004d6adae49b745419b3a6caa82e0acbc1fec1c1c4fb487c12f1dcdea9733dafe8
+  checksum: 10c0/0aa167d51238ee3eef175867d272478aa1d22a519de47a1cfa9273cdbcb57ac9581645306a6573861d40de1214e21f3bd521eb5333d9643db406c33853040757
   languageName: node
   linkType: hard
 
@@ -3602,13 +3602,13 @@ __metadata:
   dependencies:
     "@jest/globals": "npm:^29.7.0"
     "@types/jest": "npm:^29.5.14"
-    "@types/node": "npm:^22.8.7"
+    "@types/node": "npm:^22.9.1"
     arweave: "npm:^1.15.5"
     jest: "npm:^29.7.0"
-    o1js: "npm:2.0.0"
+    o1js: "npm:2.1.0"
     ts-jest: "npm:^29.2.5"
     typescript: "npm:^5.6.3"
-    zkcloudworker: "npm:^0.16.4"
+    zkcloudworker: "npm:^0.16.12"
   languageName: unknown
   linkType: soft
 
@@ -3891,14 +3891,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.16.4":
-  version: 0.16.4
-  resolution: "zkcloudworker@npm:0.16.4"
+"zkcloudworker@npm:^0.16.12":
+  version: 0.16.12
+  resolution: "zkcloudworker@npm:0.16.12"
   dependencies:
     axios: "npm:^1.7.7"
     chalk: "npm:^4.1.2"
   peerDependencies:
-    o1js: ^2.0.0
-  checksum: 10c0/7c0be39c1187ed426a47b2ec0f2a49ab5f6099c9a4eecb4b299f3f764525bb48adba2ee1446edb13396715b2ec22ae932aed5b590368053497e8951d22824654
+    o1js: ^2.1.0
+  checksum: 10c0/1b1818b8bde5d456cd83e8b15ca067732a77bd5b768a634c0a049170e0a53d8abc6e7fceb933fe03e58ddb75d3bc684f72ea16b3adf12930318509bbf7a5c881
   languageName: node
   linkType: hard
