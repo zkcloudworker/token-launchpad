@@ -1,5 +1,6 @@
 import { Mina, checkZkappTransaction } from "o1js";
 import { blockchain, sleep } from "zkcloudworker";
+import fs from "fs/promises";
 
 let chain: blockchain = "local" as blockchain;
 
@@ -9,6 +10,10 @@ export function processArguments(): {
   deploy: boolean;
   transfer: boolean;
   mint: boolean;
+  buy: boolean;
+  sell: boolean;
+  withdrawBid: boolean;
+  withdrawOffer: boolean;
   useLocalCloudWorker: boolean;
   useRandomTokenAddress: boolean;
 } {
@@ -21,6 +26,10 @@ export function processArguments(): {
   const shouldDeploy = getArgument("deploy") ?? "true";
   const shouldMint = getArgument("mint") ?? "true";
   const shouldTransfer = getArgument("transfer") ?? "true";
+  const shouldBuy = getArgument("buy") ?? "true";
+  const shouldSell = getArgument("sell") ?? "true";
+  const shouldWithdrawBid = getArgument("withdrawBid") ?? "true";
+  const shouldWithdrawOffer = getArgument("withdrawOffer") ?? "true";
   const shouldCompile = getArgument("compile") ?? "true";
   const cloud = getArgument("cloud") ?? "local";
   const random = getArgument("random") ?? "true";
@@ -40,6 +49,10 @@ export function processArguments(): {
     deploy: shouldDeploy === "true",
     transfer: shouldTransfer === "true",
     mint: shouldMint === "true",
+    buy: shouldBuy === "true",
+    sell: shouldSell === "true",
+    withdrawBid: shouldWithdrawBid === "true",
+    withdrawOffer: shouldWithdrawOffer === "true",
     useLocalCloudWorker: cloud
       ? cloud === "local"
       : chainName === "local" || chainName === "lightnet",
@@ -123,4 +136,9 @@ export async function getTxStatusFast(params: {
     );
     return { success: false, error: error?.message ?? "Cannot get tx status" };
   }
+}
+
+export async function writeFile(params: { type: string; data: string }) {
+  const { type, data } = params;
+  await fs.writeFile(`./${type}.json`, data);
 }
