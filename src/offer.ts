@@ -10,11 +10,9 @@ import {
   SmartContract,
   Bool,
   assert,
-  TokenId,
   Field,
-  Mina,
 } from "o1js";
-import { FungibleToken } from "zkcloudworker";
+import { FungibleToken, Whitelist, Storage } from "zkcloudworker";
 
 export const offerVerificationKeys = {
   testnet: {
@@ -27,13 +25,18 @@ export const offerVerificationKeys = {
     data: undefined,
   },
 };
-
+export interface FungibleTokenOfferContractDeployProps
+  extends Exclude<DeployArgs, undefined> {
+  /** The whitelist. */
+  // whitelist: Whitelist;
+}
 export class FungibleTokenOfferContract extends SmartContract {
   @state(UInt64) price = State<UInt64>();
   @state(PublicKey) seller = State<PublicKey>();
   @state(PublicKey) token = State<PublicKey>();
+  // @state(Whitelist) whitelist = State<Whitelist>();
 
-  async deploy(args: DeployArgs) {
+  async deploy(args: FungibleTokenOfferContractDeployProps) {
     await super.deploy(args);
     const verificationKey =
       args?.verificationKey ?? FungibleTokenOfferContract._verificationKey;
@@ -46,6 +49,7 @@ export class FungibleTokenOfferContract extends SmartContract {
     // assert(networkId === "mainnet" || networkId === "testnet");
     // assert(hash === offerVerificationKeys[networkId].hash);
     // assert(verificationKey.data === offerVerificationKeys[networkId].data);
+    // this.whitelist.set(args.whitelist);
     this.account.permissions.set({
       ...Permissions.default(),
       send: Permissions.proof(),
@@ -55,29 +59,43 @@ export class FungibleTokenOfferContract extends SmartContract {
     });
   }
 
-  @method async initialize(
-    seller: PublicKey,
-    token: PublicKey,
-    amount: UInt64,
-    price: UInt64
-  ) {
+  events = {
+    offer: UInt64,
+    withdraw: UInt64,
+    buy: UInt64,
+  };
+
+  @method async initialize(token: PublicKey, amount: UInt64, price: UInt64) {
     this.account.provedState.requireEquals(Bool(false));
     const tokenContract = new FungibleToken(token);
     const tokenId = tokenContract.deriveTokenId();
     tokenId.assertEquals(this.tokenId);
+    const seller = this.sender.getUnconstrained();
+    const sellerUpdate = AccountUpdate.createSigned(seller);
+    sellerUpdate.body.useFullCommitment = Bool(true);
     await tokenContract.transfer(seller, this.address, amount);
 
     this.seller.set(seller);
     this.price.set(price);
     this.token.set(token);
+    this.emitEvent("offer", amount);
   }
 
-  @method async offer(amount: UInt64) {
+  @method async offer(amount: UInt64, price: UInt64) {
     const seller = this.seller.getAndRequireEquals();
     const token = this.token.getAndRequireEquals();
     const tokenContract = new FungibleToken(token);
     const tokenId = tokenContract.deriveTokenId();
     tokenId.assertEquals(this.tokenId);
+
+    const balance = this.account.balance.getAndRequireEquals();
+    const oldPrice = this.price.getAndRequireEquals();
+    // Price can be changed only when the balance is 0
+    price
+      .equals(oldPrice)
+      .or(balance.equals(UInt64.from(0)))
+      .assertTrue();
+    this.price.set(price);
 
     const sender = this.sender.getUnconstrained();
     const senderUpdate = AccountUpdate.createSigned(sender);
@@ -85,6 +103,7 @@ export class FungibleTokenOfferContract extends SmartContract {
     sender.assertEquals(seller);
 
     await tokenContract.transfer(sender, this.address, amount);
+    this.emitEvent("offer", amount);
   }
 
   @method async withdraw(amount: UInt64) {
@@ -105,6 +124,7 @@ export class FungibleTokenOfferContract extends SmartContract {
     let offerUpdate = this.send({ to: senderUpdate, amount });
     offerUpdate.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
     offerUpdate.body.useFullCommitment = Bool(true);
+    this.emitEvent("withdraw", amount);
   }
 
   @method async buy(amount: UInt64) {
@@ -133,5 +153,11 @@ export class FungibleTokenOfferContract extends SmartContract {
     let offerUpdate = this.send({ to: buyer, amount });
     offerUpdate.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
     offerUpdate.body.useFullCommitment = Bool(true);
+
+    // const whitelist = this.whitelist.getAndRequireEquals();
+    // const whitelistedAmount = await whitelist.getWhitelistedAmount(buyer);
+    // amount.assertLessThanOrEqual(whitelistedAmount.assertSome());
+
+    this.emitEvent("buy", amount);
   }
 }

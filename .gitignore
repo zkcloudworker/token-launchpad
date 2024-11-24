@@ -1,9 +1,12 @@
 env.json
+.env.test
 .DS_Store
 yarn-error.log
 node_modules/
 cache/
+cache-mainnet/
 image/
+dist/
 .yarn/
 .pnp.cjs
 .pnp.loader.mjs

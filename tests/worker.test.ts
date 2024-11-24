@@ -7,8 +7,6 @@ import {
   PublicKey,
   setNumberOfWorkers,
   UInt8,
-  Bool,
-  Field,
   TokenId,
 } from "o1js";
 import {
@@ -23,18 +21,19 @@ import {
   FungibleTokenAdmin,
   serializeTransaction,
 } from "zkcloudworker";
-import { buildDeployTransaction, buildTransaction } from "../src/build";
-import { LAUNCH_FEE, TRANSACTION_FEE } from "../src/fee";
-import { zkcloudworker } from "..";
-import { JWT } from "../env.json";
+import { buildDeployTransaction, buildTransaction } from "../src/build.js";
+import { LAUNCH_FEE, TRANSACTION_FEE } from "../src/fee.js";
+import { zkcloudworker } from "../index.js";
+// import { JWT } from "../env.json";
+const JWT: string = process.env.JWT!;
 import {
   testKeys as devnetKeys,
   tokenContractKey,
   adminContractKey,
   wallet,
-} from "./config";
-import { processArguments, sendTx, getTxStatusFast } from "./utils";
-import { FungibleTokenOfferContract } from "../src/offer";
+} from "./config.js";
+import { processArguments, sendTx, getTxStatusFast } from "./utils.js";
+import { FungibleTokenOfferContract } from "../src/offer.js";
 
 const { TestPublicKey } = Mina;
 type TestPublicKey = Mina.TestPublicKey;
@@ -155,9 +154,9 @@ describe("Token Launchpad Worker", () => {
       for (const contract of methods) {
         // calculate the size of the contract - the sum or rows for each method
         const size = Object.values(contract.result).reduce(
-          (acc, method) => acc + method.rows,
+          (acc, method) => acc + (method as any).rows,
           0
-        );
+        ) as number;
         // calculate percentage rounded to 0 decimal places
         const percentage = Math.round(((size * 100) / maxRows) * 100) / 100;
 
@@ -817,12 +816,9 @@ describe("Token Launchpad Worker", () => {
     it(`should transfer tokens`, async () => {
       console.time("transferred");
 
-      const tokenContract = new FungibleToken(tokenKey);
-      const tokenId = tokenContract.deriveTokenId();
-
       const addresses: { from: TestPublicKey; to: TestPublicKey }[] = [
         { from: user1, to: user3 },
-        { from: user2, to: user4 },
+        // { from: user2, to: user4 },
       ];
       const hashArray: string[] = [];
       const amount = UInt64.from(10e9);

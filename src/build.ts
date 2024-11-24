@@ -6,8 +6,9 @@ import {
   FungibleTokenTransactionType,
   blockchain,
   fungibleTokenVerificationKeys,
+  Whitelist,
 } from "zkcloudworker";
-import { FungibleTokenOfferContract, offerVerificationKeys } from "./offer";
+import { FungibleTokenOfferContract, offerVerificationKeys } from "./offer.js";
 import {
   PublicKey,
   Mina,
@@ -263,19 +264,20 @@ export async function buildTransaction(params: {
         break;
 
       case "offer":
+        if (price === undefined) throw new Error("Error: Price is required");
         if (isNewAccount) {
-          if (price === undefined) throw new Error("Error: Price is required");
           await offerContractDeployment.deploy({
             verificationKey: offerVerificationKey,
+            // whitelist: Whitelist.empty(),
           });
           offerContract.account.zkappUri.set(`Offer for ${tokenSymbol}`);
-          await offerContract.initialize(sender, tokenAddress, amount, price);
+          await offerContract.initialize(tokenAddress, amount, price);
           await zkToken.approveAccountUpdates([
             offerContractDeployment.self,
             offerContract.self,
           ]);
         } else {
-          await offerContract.offer(amount);
+          await offerContract.offer(amount, price);
           await zkToken.approveAccountUpdate(offerContract.self);
         }
 
