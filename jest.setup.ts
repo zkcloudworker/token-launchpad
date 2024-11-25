@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import console from "console";
-import "source-map-support/register";
 import config from "./jest.config.js";
 
 dotenv.config({ path: ".env.test" });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { Mina, VerificationKey, Field, Cache } from "o1js";
+import { Mina, VerificationKey, Field, Cache, SmartContract } from "o1js";
 import { initBlockchain, blockchain } from "zkcloudworker";
 import fs from "fs/promises";
 import {
@@ -52,6 +52,38 @@ export function compileContracts(chain: blockchain) {
     console.log(`zkcloudworker version:`, zkcloudworkerVersion);
     for (const contract of contracts) {
       console.log(`${contract.name} contract:`, contract.contract.name);
+    }
+  });
+
+  it("should analyze methods", async () => {
+    console.log("Analyzing contracts methods...");
+    console.time("methods analyzed");
+    const methods: any[] = [];
+    for (const contract of contracts) {
+      methods.push({
+        name: contract.name,
+        result: await contract.contract.analyzeMethods(),
+        skip: true,
+      });
+    }
+    console.timeEnd("methods analyzed");
+    const maxRows = 2 ** 16;
+    for (const contract of methods) {
+      // calculate the size of the contract - the sum or rows for each method
+      const size = Object.values(contract.result).reduce(
+        (acc, method) => acc + (method as any).rows,
+        0
+      ) as number;
+      // calculate percentage rounded to 0 decimal places
+      const percentage = Math.round(((size * 100) / maxRows) * 100) / 100;
+
+      console.log(
+        `method's total size for a ${contract.name} is ${size} rows (${percentage}% of max ${maxRows} rows)`
+      );
+      if (contract.skip !== true)
+        for (const method in contract.result) {
+          console.log(method, `rows:`, (contract.result as any)[method].rows);
+        }
     }
   });
 

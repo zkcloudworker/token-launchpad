@@ -14,6 +14,12 @@ export function processArguments(): {
   sell: boolean;
   withdrawBid: boolean;
   withdrawOffer: boolean;
+  whitelistAdmin: boolean;
+  whitelistOffer: boolean;
+  whitelistBid: boolean;
+  updateWhitelistAdmin: boolean;
+  updateWhitelistOffer: boolean;
+  updateWhitelistBid: boolean;
   useLocalCloudWorker: boolean;
   useRandomTokenAddress: boolean;
 } {
@@ -31,6 +37,14 @@ export function processArguments(): {
   const shouldWithdrawBid = getArgument("withdrawBid") ?? "true";
   const shouldWithdrawOffer = getArgument("withdrawOffer") ?? "true";
   const shouldCompile = getArgument("compile") ?? "true";
+  const shouldWhitelistAdmin = getArgument("whitelistAdmin") ?? "true";
+  const shouldWhitelistOffer = getArgument("whitelistOffer") ?? "true";
+  const shouldWhitelistBid = getArgument("whitelistBid") ?? "true";
+  const shouldUpdateWhitelistAdmin =
+    getArgument("updateWhitelistAdmin") ?? "true";
+  const shouldUpdateWhitelistOffer =
+    getArgument("updateWhitelistOffer") ?? "true";
+  const shouldUpdateWhitelistBid = getArgument("updateWhitelistBid") ?? "true";
   const cloud = getArgument("cloud") ?? "local";
   const random = getArgument("random") ?? "true";
   if (
@@ -57,6 +71,12 @@ export function processArguments(): {
       ? cloud === "local"
       : chainName === "local" || chainName === "lightnet",
     useRandomTokenAddress: random === "true",
+    whitelistAdmin: shouldWhitelistAdmin === "true",
+    whitelistOffer: shouldWhitelistOffer === "true",
+    whitelistBid: shouldWhitelistBid === "true",
+    updateWhitelistAdmin: shouldUpdateWhitelistAdmin === "true",
+    updateWhitelistOffer: shouldUpdateWhitelistOffer === "true",
+    updateWhitelistBid: shouldUpdateWhitelistBid === "true",
   };
 }
 
