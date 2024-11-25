@@ -17,11 +17,17 @@ import {
   fee,
   initBlockchain,
   accountBalanceMina,
-  FungibleToken,
-  FungibleTokenAdmin,
+  // FungibleToken,
+  // FungibleTokenAdmin,
   serializeTransaction,
 } from "zkcloudworker";
-import { buildDeployTransaction, buildTransaction } from "../src/build.js";
+import { FungibleTokenContract } from "../src/FungibleTokenContract.js";
+import { FungibleTokenWhitelistedAdmin } from "../src/FungibleTokenWhitelistedAdmin.js";
+import { FungibleTokenAdmin } from "../src/FungibleTokenAdmin.js";
+import {
+  buildTokenDeployTransaction,
+  buildTokenTransaction,
+} from "../src/build.js";
 import { LAUNCH_FEE, TRANSACTION_FEE } from "../src/fee.js";
 import { zkcloudworker } from "../index.js";
 // import { JWT } from "../env.json";
@@ -31,8 +37,8 @@ import {
   tokenContractKey,
   adminContractKey,
   wallet,
-} from "./config.js";
-import { processArguments, sendTx, getTxStatusFast } from "./utils.js";
+} from "./helpers/config.js";
+import { processArguments, sendTx, getTxStatusFast } from "./helpers/utils.js";
 import { FungibleTokenOfferContract } from "../src/offer.js";
 
 const { TestPublicKey } = Mina;
@@ -82,6 +88,7 @@ describe("Token Launchpad Worker", () => {
     ? TestPublicKey.random()
     : adminContractKey;
   const tokenId = TokenId.derive(tokenKey);
+  const FungibleToken = FungibleTokenContract(FungibleTokenAdmin);
 
   it(`should initialize blockchain`, async () => {
     Memory.info("initializing blockchain");
@@ -214,7 +221,7 @@ describe("Token Launchpad Worker", () => {
       console.log("deploying contract");
       console.time("deployed");
 
-      const tx = await buildDeployTransaction({
+      const tx = await buildTokenDeployTransaction({
         chain,
         fee: await fee(),
         sender: admin,
@@ -286,7 +293,7 @@ describe("Token Launchpad Worker", () => {
           ? `mint ${symbol}`.substring(0, 30)
           : `mint ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`;
       for (const to of toArray) {
-        const tx = await buildTransaction({
+        const tx = await buildTokenTransaction({
           txType: "mint",
           chain,
           fee: await fee(),
@@ -425,7 +432,7 @@ describe("Token Launchpad Worker", () => {
           "Building offer transaction for contract:",
           contract.toBase58()
         );
-        const tx = await buildTransaction({
+        const tx = await buildTokenTransaction({
           txType: "offer",
           chain,
           fee: await fee(),
@@ -569,7 +576,7 @@ describe("Token Launchpad Worker", () => {
         const nonce = Number(Mina.getAccount(buyer).nonce.toBigint());
         console.log("Building buy transaction:", contract.toBase58());
         console.log("buyer:", buyer.toBase58());
-        const tx = await buildTransaction({
+        const tx = await buildTokenTransaction({
           txType: "buy",
           chain,
           fee: await fee(),
@@ -714,7 +721,7 @@ describe("Token Launchpad Worker", () => {
         const nonce = Number(Mina.getAccount(seller).nonce.toBigint());
         console.log("Building withdraw transaction:", contract.toBase58());
         console.log("seller:", seller.toBase58());
-        const tx = await buildTransaction({
+        const tx = await buildTokenTransaction({
           txType: "withdrawOffer",
           chain,
           fee: await fee(),
@@ -831,7 +838,7 @@ describe("Token Launchpad Worker", () => {
         await fetchMinaAccount({ publicKey: from, force: true });
         const nonce = Number(Mina.getAccount(from).nonce.toBigint());
         console.log("Building transfer transaction...");
-        const tx = await buildTransaction({
+        const tx = await buildTokenTransaction({
           txType: "transfer",
           chain,
           fee: await fee(),

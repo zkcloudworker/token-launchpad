@@ -4,8 +4,8 @@ import {
   sleep,
   fetchMinaAccount,
   accountBalanceMina,
-  FungibleToken,
-  FungibleTokenAdmin,
+  // FungibleToken,
+  // FungibleTokenAdmin,
   FungibleTokenDeployParams,
   FungibleTokenTransactionParams,
   FungibleTokenJobResult,
@@ -16,6 +16,12 @@ import {
   fungibleTokenVerificationKeys,
   blockchain,
 } from "zkcloudworker";
+import {
+  FungibleToken,
+  WhitelistedFungibleToken,
+  FungibleTokenAdmin,
+  FungibleTokenWhitelistedAdmin,
+} from "./token.js";
 import { FungibleTokenOfferContract, offerVerificationKeys } from "./offer.js";
 import {
   VerificationKey,
@@ -29,7 +35,7 @@ import {
 } from "o1js";
 // import { WALLET } from "../env.json";
 const WALLET: string = process.env.WALLET!;
-import { buildTransaction, buildDeployTransaction } from "./build.js";
+import { buildTokenTransaction, buildTokenDeployTransaction } from "./build.js";
 import { LAUNCH_FEE, TRANSACTION_FEE } from "./fee.js";
 
 interface TinyTransactionParams {
@@ -204,7 +210,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       TokenLauncherWorker.contractVerificationKey === undefined
     )
       throw new Error("Contract verification keys are undefined");
-    const txNew = await buildDeployTransaction({
+    const txNew = await buildTokenDeployTransaction({
       chain: this.cloud.chain,
       fee,
       sender,
@@ -378,7 +384,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       args.serializedTransaction,
       signedJson
     );
-    const txNew = await buildTransaction({
+    const txNew = await buildTokenTransaction({
       txType,
       chain: this.cloud.chain,
       fee,

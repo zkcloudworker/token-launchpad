@@ -10,13 +10,16 @@ import {
   SmartContract,
   State,
   state,
+  UInt64,
   VerificationKey,
 } from "o1js";
+import { Whitelist } from "zkcloudworker";
 import { FungibleTokenAdminBase } from "./FungibleTokenContract.js";
 
-export interface FungibleTokenAdminDeployProps
+export interface FungibleTokenWhitelistedAdminDeployProps
   extends Exclude<DeployArgs, undefined> {
   adminPublicKey: PublicKey;
+  whitelist: Whitelist;
 }
 
 /** A contract that grants permissions for administrative actions on a token.
@@ -27,16 +30,17 @@ export interface FungibleTokenAdminDeployProps
  * The advantage is that third party applications that only use the token in a non-privileged way
  * can integrate against the unchanged token contract.
  */
-export class FungibleTokenAdmin
+export class FungibleTokenWhitelistedAdmin
   extends SmartContract
   implements FungibleTokenAdminBase
 {
-  @state(PublicKey)
-  private adminPublicKey = State<PublicKey>();
+  @state(PublicKey) adminPublicKey = State<PublicKey>();
+  @state(Whitelist) whitelist = State<Whitelist>();
 
-  async deploy(props: FungibleTokenAdminDeployProps) {
+  async deploy(props: FungibleTokenWhitelistedAdminDeployProps) {
     await super.deploy(props);
     this.adminPublicKey.set(props.adminPublicKey);
+    this.whitelist.set(props.whitelist);
     this.account.permissions.set({
       ...Permissions.default(),
       setVerificationKey:
@@ -65,8 +69,14 @@ export class FungibleTokenAdmin
 
   @method.returns(Bool)
   public async canMint(_accountUpdate: AccountUpdate) {
-    await this.ensureAdminSignature();
-    return Bool(true);
+    const address = _accountUpdate.body.publicKey;
+    const balanceChange = _accountUpdate.body.balanceChange;
+    balanceChange.isPositive().assertTrue();
+    const whitelist = this.whitelist.getAndRequireEquals();
+    const whitelistedAmount = await whitelist.getWhitelistedAmount(address);
+    return balanceChange.magnitude.lessThanOrEqual(
+      whitelistedAmount.orElse(UInt64.from(0)) // here can be a minimum amount allowed by travel rule instead of 0
+    );
   }
 
   @method.returns(Bool)

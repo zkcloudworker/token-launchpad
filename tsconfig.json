@@ -23,6 +23,6 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true
   },
-  "include": ["**/*.ts", "package.json", "env.json", "jest.config-ts.ts"],
+  "include": ["**/*.ts", "package.json", "env.json", "jest.config-ts.ts", "src/FungibleToken.ts.old"],
   "exclude": ["node_modules", "dist"]
 }

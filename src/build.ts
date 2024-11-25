@@ -1,13 +1,18 @@
 import {
   fetchMinaAccount,
   accountBalanceMina,
-  FungibleToken,
-  FungibleTokenAdmin,
   FungibleTokenTransactionType,
   blockchain,
   fungibleTokenVerificationKeys,
   Whitelist,
+  WhitelistedAddressList,
 } from "zkcloudworker";
+import {
+  FungibleToken,
+  WhitelistedFungibleToken,
+  FungibleTokenAdmin,
+  FungibleTokenWhitelistedAdmin,
+} from "./token.js";
 import { FungibleTokenOfferContract, offerVerificationKeys } from "./offer.js";
 import {
   PublicKey,
@@ -22,7 +27,7 @@ import {
   Field,
 } from "o1js";
 
-export async function buildDeployTransaction(params: {
+export async function buildTokenDeployTransaction(params: {
   chain: blockchain;
   fee: UInt64;
   sender: PublicKey;
@@ -38,6 +43,7 @@ export async function buildDeployTransaction(params: {
   provingKey: PublicKey;
   provingFee: UInt64;
   decimals: UInt8;
+  whitelist?: WhitelistedAddressList;
 }): Promise<Transaction<false, false>> {
   const {
     fee,
@@ -54,6 +60,7 @@ export async function buildDeployTransaction(params: {
     provingFee,
     decimals,
     chain,
+    whitelist,
   } = params;
   const vk =
     fungibleTokenVerificationKeys[chain === "mainnet" ? "mainnet" : "testnet"];
@@ -79,7 +86,11 @@ export async function buildDeployTransaction(params: {
   }
 
   console.log("Sender balance:", await accountBalanceMina(sender));
+  const whitelistedAddresses = whitelist
+    ? Whitelist.create({ list: whitelist, name: symbol })
+    : undefined;
 
+  // const FungibleToken = FungibleTokenContract(FungibleTokenAdmin);
   const zkToken = new FungibleToken(tokenAddress);
   const zkAdmin = new FungibleTokenAdmin(adminContractAddress);
 
@@ -119,7 +130,7 @@ export async function buildDeployTransaction(params: {
   return tx;
 }
 
-export async function buildTransaction(params: {
+export async function buildTokenTransaction(params: {
   txType: FungibleTokenTransactionType;
   chain: blockchain;
   fee: UInt64;
@@ -268,10 +279,10 @@ export async function buildTransaction(params: {
         if (isNewAccount) {
           await offerContractDeployment.deploy({
             verificationKey: offerVerificationKey,
-            // whitelist: Whitelist.empty(),
+            whitelist: Whitelist.empty(),
           });
           offerContract.account.zkappUri.set(`Offer for ${tokenSymbol}`);
-          await offerContract.initialize(tokenAddress, amount, price);
+          await offerContract.initialize(sender, tokenAddress, amount, price);
           await zkToken.approveAccountUpdates([
             offerContractDeployment.self,
             offerContract.self,

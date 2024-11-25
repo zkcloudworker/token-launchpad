@@ -12,7 +12,13 @@ import {
   state,
   VerificationKey,
 } from "o1js";
-import { FungibleTokenAdminBase } from "./FungibleTokenContract.js";
+
+export type FungibleTokenAdminBase = SmartContract & {
+  canMint(accountUpdate: AccountUpdate): Promise<Bool>;
+  canChangeAdmin(admin: PublicKey): Promise<Bool>;
+  canPause(): Promise<Bool>;
+  canResume(): Promise<Bool>;
+};
 
 export interface FungibleTokenAdminDeployProps
   extends Exclude<DeployArgs, undefined> {

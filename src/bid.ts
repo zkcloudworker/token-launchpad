@@ -12,13 +12,7 @@ import {
   Field,
   assert,
 } from "o1js";
-import {
-  FungibleToken,
-  Storage,
-  loadIndexedMerkleMap,
-  createIpfsURL,
-  Whitelist,
-} from "zkcloudworker";
+import { FungibleToken, Whitelist } from "zkcloudworker";
 
 export const bidVerificationKeys = {
   testnet: {
@@ -130,6 +124,7 @@ export class FungibleTokenBidContract extends SmartContract {
 
   @method async sell(amount: UInt64) {
     amount.equals(UInt64.from(0)).assertFalse();
+    const price = this.price.getAndRequireEquals();
     const totalPriceField = price.value
       .mul(amount.value)
       .div(Field(1_000_000_000));
@@ -140,43 +135,16 @@ export class FungibleTokenBidContract extends SmartContract {
     const totalPrice = UInt64.Unsafe.fromField(totalPriceField);
 
     this.account.balance.requireBetween(totalPrice, UInt64.MAXINT());
-    const amount = this.amount.getAndRequireEquals();
-    const owner = this.owner.getAndRequireEquals();
-    const price = this.price.getAndRequireEquals();
+    const buyer = this.buyer.getAndRequireEquals();
     const token = this.token.getAndRequireEquals();
 
-    let receiverAU = this.send({ to: seller, amount: price });
-    receiverAU.body.useFullCommitment = Bool(true);
+    const seller = this.sender.getUnconstrained();
+    const sellerUpdate = this.send({ to: seller, amount: totalPrice });
+    sellerUpdate.body.useFullCommitment = Bool(true);
+    sellerUpdate.requireSignature();
 
     const tokenContract = new FungibleToken(token);
-    await tokenContract.transfer(seller, owner, amount);
-
-    this.price.set(UInt64.from(0));
-    this.amount.set(UInt64.from(0));
-    this.owner.set(PublicKey.empty());
-    this.token.set(PublicKey.empty());
-  }
-  @method async assertInsideSettle() {
-    this.insideSettle.requireEquals(Bool(true));
-    this.insideSettle.set(Bool(false));
-  }
-
-  @method async settle(seller: PublicKey, offer: PublicKey) {
-    const amount = this.amount.getAndRequireEquals();
-    const owner = this.owner.getAndRequireEquals();
-    const price = this.price.getAndRequireEquals();
-    const token = this.token.getAndRequireEquals();
-
-    const tokenContract = new FungibleToken(token);
-    const tokenId = tokenContract.deriveTokenId();
-    const offerContract = new OfferContract(offer, tokenId);
-    await offerContract.settle(owner, seller, amount, price, this.address);
-    await tokenContract.approveAccountUpdate(offerContract.self);
-    //this.self.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
-
-    const sender = this.send({ to: seller, amount: price });
-    sender.body.useFullCommitment = Bool(true);
-    this.approve(sender);
-    this.insideSettle.set(Bool(true));
+    await tokenContract.transfer(seller, buyer, amount);
+    this.emitEvent("sell", amount);
   }
 }
