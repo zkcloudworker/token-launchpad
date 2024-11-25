@@ -17,13 +17,18 @@ import {
   fee,
   initBlockchain,
   accountBalanceMina,
-  // FungibleToken,
-  // FungibleTokenAdmin,
   serializeTransaction,
+  tokenBalance,
 } from "zkcloudworker";
-import { FungibleTokenContract } from "../src/FungibleTokenContract.js";
-import { FungibleTokenWhitelistedAdmin } from "../src/FungibleTokenWhitelistedAdmin.js";
-import { FungibleTokenAdmin } from "../src/FungibleTokenAdmin.js";
+import {
+  FungibleToken,
+  WhitelistedFungibleToken,
+  FungibleTokenAdmin,
+  FungibleTokenWhitelistedAdmin,
+  FungibleTokenOfferContract,
+  FungibleTokenBidContract,
+  tokenVerificationKeys,
+} from "../src/token.js";
 import {
   buildTokenDeployTransaction,
   buildTokenTransaction,
@@ -39,7 +44,6 @@ import {
   wallet,
 } from "./helpers/config.js";
 import { processArguments, sendTx, getTxStatusFast } from "./helpers/utils.js";
-import { FungibleTokenOfferContract } from "../src/offer.js";
 
 const { TestPublicKey } = Mina;
 type TestPublicKey = Mina.TestPublicKey;
@@ -60,6 +64,12 @@ const {
   withdrawOffer,
   useRandomTokenAddress,
   useLocalCloudWorker,
+  whitelistAdmin,
+  whitelistOffer,
+  whitelistBid,
+  updateWhitelistAdmin,
+  updateWhitelistOffer,
+  updateWhitelistBid,
 } = args;
 
 const api = new TokenAPI({
@@ -67,6 +77,21 @@ const api = new TokenAPI({
   zkcloudworker,
   chain,
 });
+
+let accounts: {
+  name: string;
+  publicKey: PublicKey;
+  balance?: number;
+  tokenBalance?: number;
+}[] = [];
+
+let tokenKey = useRandomTokenAddress
+  ? TestPublicKey.random()
+  : tokenContractKey;
+let adminKey = useRandomTokenAddress
+  ? TestPublicKey.random()
+  : adminContractKey;
+const tokenId = TokenId.derive(tokenKey);
 
 describe("Token Launchpad Worker", () => {
   const symbol = "TEST";
@@ -80,15 +105,8 @@ describe("Token Launchpad Worker", () => {
   let user4: TestPublicKey;
   let buyer: TestPublicKey;
   let bidder: TestPublicKey;
-
-  let tokenKey = useRandomTokenAddress
-    ? TestPublicKey.random()
-    : tokenContractKey;
-  let adminKey = useRandomTokenAddress
-    ? TestPublicKey.random()
-    : adminContractKey;
-  const tokenId = TokenId.derive(tokenKey);
-  const FungibleToken = FungibleTokenContract(FungibleTokenAdmin);
+  const offer = TestPublicKey.random();
+  const bid = TestPublicKey.random();
 
   it(`should initialize blockchain`, async () => {
     Memory.info("initializing blockchain");
@@ -105,6 +123,18 @@ describe("Token Launchpad Worker", () => {
     if (keys.length < 6) throw new Error("Invalid keys");
     let topup: TestPublicKey;
     [admin, user1, user2, user3, user4, topup, bidder, buyer] = keys;
+    accounts = [
+      { name: "admin", publicKey: admin },
+      { name: "user1", publicKey: user1 },
+      { name: "user2", publicKey: user2 },
+      { name: "user3", publicKey: user3 },
+      { name: "user4", publicKey: user4 },
+      { name: "buyer", publicKey: buyer },
+      { name: "bidder", publicKey: bidder },
+      { name: "offer", publicKey: offer },
+      { name: "bid", publicKey: bid },
+      { name: "wallet", publicKey: wallet },
+    ];
     await fetchMinaAccount({ publicKey: wallet, force: false });
     if (!Mina.hasAccount(wallet)) {
       const topupTx = await Mina.transaction(
@@ -125,14 +155,7 @@ describe("Token Launchpad Worker", () => {
 
     console.log("contract address:", tokenKey.toBase58());
     console.log("admin:", admin.toBase58());
-    console.log("admin balance:", await accountBalanceMina(admin));
-    console.log("user1 balance:", await accountBalanceMina(user1));
-    console.log("user2 balance:", await accountBalanceMina(user2));
-    console.log("user3 balance:", await accountBalanceMina(user3));
-    console.log("user4 balance:", await accountBalanceMina(user4));
-    console.log("bidder balance:", await accountBalanceMina(bidder));
-    console.log("buyer balance:", await accountBalanceMina(buyer));
-    console.log("wallet balance:", await accountBalanceMina(wallet));
+    await printBalances();
   });
 
   if (compile) {
@@ -221,7 +244,7 @@ describe("Token Launchpad Worker", () => {
       console.log("deploying contract");
       console.time("deployed");
 
-      const tx = await buildTokenDeployTransaction({
+      const { tx } = await buildTokenDeployTransaction({
         chain,
         fee: await fee(),
         sender: admin,
@@ -293,7 +316,7 @@ describe("Token Launchpad Worker", () => {
           ? `mint ${symbol}`.substring(0, 30)
           : `mint ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`;
       for (const to of toArray) {
-        const tx = await buildTokenTransaction({
+        const { tx } = await buildTokenTransaction({
           txType: "mint",
           chain,
           fee: await fee(),
@@ -353,6 +376,7 @@ describe("Token Launchpad Worker", () => {
       Memory.info("minted");
       console.timeEnd("minted");
       if (chain !== "local") await sleep(10000);
+      await printBalances();
     });
   }
 
@@ -376,7 +400,7 @@ describe("Token Launchpad Worker", () => {
       const withdrawAmount = UInt64.from(150e9);
       offers = [
         {
-          contract: TestPublicKey.random(),
+          contract: offer,
           sellAmount: offeredAmount,
           boughtAmount,
           withdrawAmount,
@@ -432,7 +456,7 @@ describe("Token Launchpad Worker", () => {
           "Building offer transaction for contract:",
           contract.toBase58()
         );
-        const tx = await buildTokenTransaction({
+        const { tx } = await buildTokenTransaction({
           txType: "offer",
           chain,
           fee: await fee(),
@@ -491,40 +515,8 @@ describe("Token Launchpad Worker", () => {
         }
         console.log("offer tx included", hash);
       }
-      for (const { seller, contract } of offers) {
-        await fetchMinaAccount({
-          publicKey: seller,
-          tokenId,
-          force: true,
-        });
-        const balanceSeller = Mina.hasAccount(seller, tokenId)
-          ? Mina.getAccount(seller, tokenId).balance
-          : undefined;
-        expect(balanceSeller).toBeDefined();
-        if (balanceSeller === undefined)
-          throw new Error(`Seller account ${seller.toBase58()} is undefined`);
-        console.log(
-          "seller balance:",
-          seller.toBase58(),
-          balanceSeller.toBigInt() / 1_000_000_000n
-        );
-        await fetchMinaAccount({
-          publicKey: contract,
-          tokenId,
-          force: true,
-        });
-        const balanceOffer = Mina.hasAccount(contract, tokenId)
-          ? Mina.getAccount(contract, tokenId).balance
-          : undefined;
-        expect(balanceOffer).toBeDefined();
-        if (balanceOffer === undefined)
-          throw new Error(`Offer account ${contract.toBase58()} is undefined`);
-        console.log(
-          "offer balance:",
-          contract.toBase58(),
-          balanceOffer.toBigInt() / 1_000_000_000n
-        );
-      }
+      await printBalances();
+
       Memory.info("offered");
       console.timeEnd("offered");
       if (chain !== "local") await sleep(10000);
@@ -535,36 +527,6 @@ describe("Token Launchpad Worker", () => {
       const hashArray: string[] = [];
 
       for (const { contract, boughtAmount, price, buyer } of offers) {
-        await fetchMinaAccount({
-          publicKey: buyer,
-          tokenId,
-          force: false,
-        });
-        const balanceBuyer = Mina.hasAccount(buyer, tokenId)
-          ? Mina.getAccount(buyer, tokenId).balance
-          : undefined;
-        console.log(
-          "buyer balance:",
-          buyer.toBase58(),
-          balanceBuyer ? balanceBuyer.toBigInt() / 1_000_000_000n : undefined
-        );
-        await fetchMinaAccount({
-          publicKey: contract,
-          tokenId,
-          force: true,
-        });
-        const balanceOffer = Mina.hasAccount(contract, tokenId)
-          ? Mina.getAccount(contract, tokenId).balance
-          : undefined;
-        expect(balanceOffer).toBeDefined();
-        if (balanceOffer === undefined)
-          throw new Error(`Offer account ${contract.toBase58()} is undefined`);
-        console.log(
-          "offer balance:",
-          contract.toBase58(),
-          balanceOffer.toBigInt() / 1_000_000_000n
-        );
-
         const boughtMemo =
           `buy ${Number(boughtAmount.toBigInt()) / 1_000_000_000} ${symbol}`
             .length > 30
@@ -576,7 +538,7 @@ describe("Token Launchpad Worker", () => {
         const nonce = Number(Mina.getAccount(buyer).nonce.toBigint());
         console.log("Building buy transaction:", contract.toBase58());
         console.log("buyer:", buyer.toBase58());
-        const tx = await buildTokenTransaction({
+        const { tx } = await buildTokenTransaction({
           txType: "buy",
           chain,
           fee: await fee(),
@@ -635,43 +597,11 @@ describe("Token Launchpad Worker", () => {
         }
         console.log("buy tx included", hash);
       }
-      for (const { buyer, contract } of offers) {
-        await fetchMinaAccount({
-          publicKey: buyer,
-          tokenId,
-          force: true,
-        });
-        const balanceBuyer = Mina.hasAccount(buyer, tokenId)
-          ? Mina.getAccount(buyer, tokenId).balance
-          : undefined;
-        expect(balanceBuyer).toBeDefined();
-        if (balanceBuyer === undefined)
-          throw new Error(`Buyer account ${buyer.toBase58()} is undefined`);
-        console.log(
-          "buyer balance:",
-          buyer.toBase58(),
-          balanceBuyer.toBigInt() / 1_000_000_000n
-        );
-        await fetchMinaAccount({
-          publicKey: contract,
-          tokenId,
-          force: true,
-        });
-        const balanceOffer = Mina.hasAccount(contract, tokenId)
-          ? Mina.getAccount(contract, tokenId).balance
-          : undefined;
-        expect(balanceOffer).toBeDefined();
-        if (balanceOffer === undefined)
-          throw new Error(`Offer account ${contract.toBase58()} is undefined`);
-        console.log(
-          "offer balance:",
-          contract.toBase58(),
-          balanceOffer.toBigInt() / 1_000_000_000n
-        );
-      }
+
       Memory.info("bought");
       console.timeEnd("bought");
       if (chain !== "local") await sleep(10000);
+      await printBalances();
     });
 
     it(`should withdraw tokens`, async () => {
@@ -679,36 +609,6 @@ describe("Token Launchpad Worker", () => {
       const hashArray: string[] = [];
 
       for (const { contract, withdrawAmount, seller } of offers) {
-        await fetchMinaAccount({
-          publicKey: seller,
-          tokenId,
-          force: false,
-        });
-        const balanceSeller = Mina.hasAccount(seller, tokenId)
-          ? Mina.getAccount(seller, tokenId).balance
-          : undefined;
-        console.log(
-          "seller balance:",
-          seller.toBase58(),
-          balanceSeller ? balanceSeller.toBigInt() / 1_000_000_000n : undefined
-        );
-        await fetchMinaAccount({
-          publicKey: contract,
-          tokenId,
-          force: true,
-        });
-        const balanceOffer = Mina.hasAccount(contract, tokenId)
-          ? Mina.getAccount(contract, tokenId).balance
-          : undefined;
-        expect(balanceOffer).toBeDefined();
-        if (balanceOffer === undefined)
-          throw new Error(`Offer account ${contract.toBase58()} is undefined`);
-        console.log(
-          "offer balance:",
-          contract.toBase58(),
-          balanceOffer.toBigInt() / 1_000_000_000n
-        );
-
         const withdrawMemo =
           `withdraw ${
             Number(withdrawAmount.toBigInt()) / 1_000_000_000
@@ -721,7 +621,7 @@ describe("Token Launchpad Worker", () => {
         const nonce = Number(Mina.getAccount(seller).nonce.toBigint());
         console.log("Building withdraw transaction:", contract.toBase58());
         console.log("seller:", seller.toBase58());
-        const tx = await buildTokenTransaction({
+        const { tx } = await buildTokenTransaction({
           txType: "withdrawOffer",
           chain,
           fee: await fee(),
@@ -779,43 +679,11 @@ describe("Token Launchpad Worker", () => {
         }
         console.log("withdraw tx included", hash);
       }
-      for (const { seller, contract } of offers) {
-        await fetchMinaAccount({
-          publicKey: seller,
-          tokenId,
-          force: true,
-        });
-        const balanceSeller = Mina.hasAccount(seller, tokenId)
-          ? Mina.getAccount(seller, tokenId).balance
-          : undefined;
-        expect(balanceSeller).toBeDefined();
-        if (balanceSeller === undefined)
-          throw new Error(`Seller account ${seller.toBase58()} is undefined`);
-        console.log(
-          "seller balance:",
-          seller.toBase58(),
-          balanceSeller.toBigInt() / 1_000_000_000n
-        );
-        await fetchMinaAccount({
-          publicKey: contract,
-          tokenId,
-          force: true,
-        });
-        const balanceOffer = Mina.hasAccount(contract, tokenId)
-          ? Mina.getAccount(contract, tokenId).balance
-          : undefined;
-        expect(balanceOffer).toBeDefined();
-        if (balanceOffer === undefined)
-          throw new Error(`Offer account ${contract.toBase58()} is undefined`);
-        console.log(
-          "offer balance:",
-          contract.toBase58(),
-          balanceOffer.toBigInt() / 1_000_000_000n
-        );
-      }
+
       Memory.info("withdrawn");
       console.timeEnd("withdrawn");
       if (chain !== "local") await sleep(10000);
+      await printBalances();
     });
   }
 
@@ -838,7 +706,7 @@ describe("Token Launchpad Worker", () => {
         await fetchMinaAccount({ publicKey: from, force: true });
         const nonce = Number(Mina.getAccount(from).nonce.toBigint());
         console.log("Building transfer transaction...");
-        const tx = await buildTokenTransaction({
+        const { tx } = await buildTokenTransaction({
           txType: "transfer",
           chain,
           fee: await fee(),
@@ -897,6 +765,33 @@ describe("Token Launchpad Worker", () => {
       Memory.info("transferred");
       console.timeEnd("transferred");
       if (chain !== "local") await sleep(10000);
+      await printBalances();
     });
   }
 });
+
+async function printBalances() {
+  for (const account of accounts) {
+    const balance = await accountBalanceMina(account.publicKey);
+    const tb = await tokenBalance(account.publicKey, tokenId);
+    if (account.balance !== balance || account.tokenBalance !== tb) {
+      const balanceDiff =
+        account.balance !== undefined ? balance - account.balance : balance;
+      const tokenBalanceDiff =
+        tb !== undefined
+          ? account.tokenBalance
+            ? tb - account.tokenBalance
+            : tb
+          : 0;
+      console.log(
+        `${account.name}: ${balance} MINA (${
+          balanceDiff > 0 ? "+" : ""
+        }${balanceDiff}), ${tb ? tb / 1_000_000_000 : 0} TEST (${
+          tokenBalanceDiff >= 0 ? "+" : ""
+        }${tokenBalanceDiff / 1_000_000_000})`
+      );
+      account.balance = balance;
+      account.tokenBalance = tb;
+    }
+  }
+}

@@ -49,6 +49,8 @@ export class FungibleTokenWhitelistedAdmin
     });
   }
 
+  events = { updateWhitelist: Whitelist };
+
   /** Update the verification key.
    * Note that because we have set the permissions for setting the verification key to `impossibleDuringCurrentVersion()`, this will only be possible in case of a protocol update that requires an update.
    */
@@ -95,5 +97,16 @@ export class FungibleTokenWhitelistedAdmin
   public async canResume(): Promise<Bool> {
     await this.ensureAdminSignature();
     return Bool(true);
+  }
+
+  @method async updateWhitelist(whitelist: Whitelist) {
+    const admin = this.adminPublicKey.getAndRequireEquals();
+    const sender = this.sender.getUnconstrained();
+    const senderUpdate = AccountUpdate.createSigned(sender);
+    senderUpdate.body.useFullCommitment = Bool(true);
+    admin.assertEquals(sender);
+
+    this.whitelist.set(whitelist);
+    this.emitEvent("updateWhitelist", whitelist);
   }
 }
