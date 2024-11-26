@@ -1,4 +1,5 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, it } from "node:test";
+import assert from "node:assert";
 import {
   Mina,
   AccountUpdate,
@@ -30,6 +31,8 @@ import {
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
+  getTxStatusFast,
+  sendTx,
 } from "zkcloudworker";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
@@ -39,7 +42,7 @@ import {
   adminContractKey,
   wallet,
 } from "./helpers/config.js";
-import { processArguments, sendTx, getTxStatusFast } from "./helpers/utils.js";
+import { processArguments } from "./helpers/utils.js";
 
 const { TestPublicKey } = Mina;
 type TestPublicKey = Mina.TestPublicKey;
@@ -89,7 +92,7 @@ let adminKey = useRandomTokenAddress
   : adminContractKey;
 const tokenId = TokenId.derive(tokenKey);
 
-describe("Token Launchpad Worker", () => {
+describe("Token Launchpad Worker", async () => {
   const symbol = "TEST";
   const name = "Test Token";
   const src = "https://minatokens.com";
@@ -115,8 +118,7 @@ describe("Token Launchpad Worker", () => {
       await initBlockchain(chain);
       keys = devnetKeys;
     }
-    expect(keys.length).toBeGreaterThanOrEqual(8);
-    if (keys.length < 6) throw new Error("Invalid keys");
+    assert(keys.length >= 8, "Invalid keys");
     let topup: TestPublicKey;
     [admin, user1, user2, user3, user4, topup, bidder, buyer] = keys;
     accounts = [
@@ -146,7 +148,7 @@ describe("Token Launchpad Worker", () => {
         }
       );
       topupTx.sign([topup.key]);
-      await sendTx(topupTx, "topup");
+      await sendTx({ tx: topupTx, description: "topup" });
     }
 
     console.log("contract address:", tokenKey.toBase58());
@@ -275,26 +277,29 @@ describe("Token Launchpad Worker", () => {
         sendTransaction: true,
       });
       console.log("deploy jobId:", jobId);
-      expect(jobId).toBeDefined();
-      if (jobId === undefined) throw new Error("Deploy jobId is undefined");
+      assert(jobId !== undefined, "Deploy jobId is undefined");
       const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-      expect(result).toBeDefined();
-      if (result === undefined) throw new Error("Deploy result is undefined");
+      assert(result !== undefined, "Deploy result is undefined");
       const resultJSON = JSON.parse(result);
-      expect(resultJSON.success).toBe(true);
+      assert(resultJSON.success, "Deploy result is not success");
       const hash = resultJSON.hash;
-      expect(hash).toBeDefined();
-      if (hash === undefined) throw new Error("Deploy hash is undefined");
+      assert(hash !== undefined, "Deploy hash is undefined");
       console.log("deploy hash:", hash);
+      console.time("deploy tx included");
       console.log("waiting for deploy tx to be included...");
+      const txStatus = await getTxStatusFast({ hash });
+      console.log("txStatus deploy", txStatus);
       while (!(await getTxStatusFast({ hash })).result === true) {
         await sleep(10000);
       }
-      console.log("deploy tx included");
+      console.timeEnd("deploy tx included");
       Memory.info("deployed");
       console.timeEnd("deployed");
-      if (chain !== "local") await sleep(10000);
+      const txStatus2 = await getTxStatusFast({ hash });
+      console.log("txStatus deploy post", txStatus2);
+      if (chain !== "local") await sleep(30000);
+      await printBalances();
     });
   }
 
@@ -347,17 +352,14 @@ describe("Token Launchpad Worker", () => {
           sendTransaction: true,
         });
         console.log("mint jobId:", jobId);
-        expect(jobId).toBeDefined();
-        if (jobId === undefined) throw new Error("Mint jobId is undefined");
+        assert(jobId !== undefined, "Mint jobId is undefined");
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-        expect(result).toBeDefined();
-        if (result === undefined) throw new Error("Mint result is undefined");
+        assert(result !== undefined, "Mint result is undefined");
         const resultJSON = JSON.parse(result);
-        expect(resultJSON.success).toBe(true);
+        assert(resultJSON.success, "Mint result is not success");
         const hash = resultJSON.hash;
-        expect(hash).toBeDefined();
-        if (hash === undefined) throw new Error("Mint hash is undefined");
+        assert(hash !== undefined, "Mint hash is undefined");
         console.log("mint hash:", hash);
         hashArray.push(hash);
       }
@@ -424,9 +426,10 @@ describe("Token Launchpad Worker", () => {
             ? Mina.getAccount(seller, tokenId).balance
             : undefined;
 
-          expect(balanceSeller).toBeDefined();
-          if (balanceSeller === undefined)
-            throw new Error(`Seller account ${seller.toBase58()} is undefined`);
+          assert(
+            balanceSeller !== undefined,
+            `Seller account ${seller.toBase58()} is undefined`
+          );
           console.log(
             "seller balance:",
             seller.toBase58(),
@@ -489,17 +492,14 @@ describe("Token Launchpad Worker", () => {
           price: Number(price.toBigInt()),
         });
         console.log("offer jobId:", jobId);
-        expect(jobId).toBeDefined();
-        if (jobId === undefined) throw new Error("Offer jobId is undefined");
+        assert(jobId !== undefined, "Offer jobId is undefined");
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-        expect(result).toBeDefined();
-        if (result === undefined) throw new Error("Offer result is undefined");
+        assert(result !== undefined, "Offer result is undefined");
         const resultJSON = JSON.parse(result);
-        expect(resultJSON.success).toBe(true);
+        assert(resultJSON.success, "Offer result is not success");
         const hash = resultJSON.hash;
-        expect(hash).toBeDefined();
-        if (hash === undefined) throw new Error("Offer hash is undefined");
+        assert(hash !== undefined, "Offer hash is undefined");
         console.log("offer hash:", hash);
         hashArray.push(hash);
       }
@@ -571,17 +571,14 @@ describe("Token Launchpad Worker", () => {
           price: Number(price.toBigInt()),
         });
         console.log("buy jobId:", jobId);
-        expect(jobId).toBeDefined();
-        if (jobId === undefined) throw new Error("Buy jobId is undefined");
+        assert(jobId !== undefined, "Buy jobId is undefined");
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-        expect(result).toBeDefined();
-        if (result === undefined) throw new Error("Buy result is undefined");
+        assert(result !== undefined, "Buy result is undefined");
         const resultJSON = JSON.parse(result);
-        expect(resultJSON.success).toBe(true);
+        assert(resultJSON.success, "Buy result is not success");
         const hash = resultJSON.hash;
-        expect(hash).toBeDefined();
-        if (hash === undefined) throw new Error("Buy hash is undefined");
+        assert(hash !== undefined, "Buy hash is undefined");
         console.log("buy hash:", hash);
         hashArray.push(hash);
       }
@@ -652,18 +649,14 @@ describe("Token Launchpad Worker", () => {
           sendTransaction: true,
         });
         console.log("withdraw jobId:", jobId);
-        expect(jobId).toBeDefined();
-        if (jobId === undefined) throw new Error("Withdraw jobId is undefined");
+        assert(jobId !== undefined, "Withdraw jobId is undefined");
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-        expect(result).toBeDefined();
-        if (result === undefined)
-          throw new Error("Withdraw result is undefined");
+        assert(result !== undefined, "Withdraw result is undefined");
         const resultJSON = JSON.parse(result);
-        expect(resultJSON.success).toBe(true);
+        assert(resultJSON.success, "Withdraw result is not success");
         const hash = resultJSON.hash;
-        expect(hash).toBeDefined();
-        if (hash === undefined) throw new Error("Withdraw hash is undefined");
+        assert(hash !== undefined, "Withdraw hash is undefined");
         console.log("withdraw hash:", hash);
         hashArray.push(hash);
       }
@@ -735,18 +728,14 @@ describe("Token Launchpad Worker", () => {
           sendTransaction: true,
         });
         console.log("transfer jobId:", jobId);
-        expect(jobId).toBeDefined();
-        if (jobId === undefined) throw new Error("Transfer jobId is undefined");
+        assert(jobId !== undefined, "Transfer jobId is undefined");
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
-        expect(result).toBeDefined();
-        if (result === undefined)
-          throw new Error("Transfer result is undefined");
+        assert(result !== undefined, "Transfer result is undefined");
         const resultJSON = JSON.parse(result);
-        expect(resultJSON.success).toBe(true);
+        assert(resultJSON.success, "Transfer result is not success");
         const hash = resultJSON.hash;
-        expect(hash).toBeDefined();
-        if (hash === undefined) throw new Error("Transfer hash is undefined");
+        assert(hash !== undefined, "Transfer hash is undefined");
         console.log("transfer hash:", hash);
         hashArray.push(hash);
       }
@@ -767,7 +756,17 @@ describe("Token Launchpad Worker", () => {
 });
 
 async function printBalances() {
+  console.log("Balances:");
   for (const account of accounts) {
+    await fetchMinaAccount({
+      publicKey: account.publicKey,
+      force: account.balance !== undefined,
+    });
+    await fetchMinaAccount({
+      publicKey: account.publicKey,
+      tokenId,
+      force: account.tokenBalance !== undefined,
+    });
     const balance = await accountBalanceMina(account.publicKey);
     const tb = await tokenBalance(account.publicKey, tokenId);
     if (account.balance !== balance || account.tokenBalance !== tb) {
@@ -780,11 +779,18 @@ async function printBalances() {
             : tb
           : 0;
       console.log(
-        `${account.name}: ${balance} MINA (${
-          balanceDiff > 0 ? "+" : ""
-        }${balanceDiff}), ${tb ? tb / 1_000_000_000 : 0} TEST (${
-          tokenBalanceDiff >= 0 ? "+" : ""
-        }${tokenBalanceDiff / 1_000_000_000})`
+        `${account.name}: ${balance} MINA ${
+          account.balance
+            ? "(" + (balanceDiff >= 0 ? "+" : "") + balanceDiff.toString() + ")"
+            : ""
+        }, ${tb ? tb / 1_000_000_000 : 0} TEST ${
+          account.tokenBalance
+            ? "(" +
+              (tokenBalanceDiff >= 0 ? "+" : "") +
+              (tokenBalanceDiff / 1_000_000_000).toString() +
+              ")"
+            : ""
+        }`
       );
       account.balance = balance;
       account.tokenBalance = tb;

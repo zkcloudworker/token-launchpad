@@ -1,14 +1,10 @@
 import { Cloud, zkCloudWorker, initBlockchain } from "zkcloudworker";
 import { initializeBindings } from "o1js";
 import { TokenLauncherWorker } from "./src/worker.js";
-// import packageJson from "./package.json"; //assert { type: "json" };
 
 export async function zkcloudworker(cloud: Cloud): Promise<zkCloudWorker> {
-  // console.log(
-  //   `starting token launcher version ${
-  //     packageJson.version ?? "unknown"
-  //   } on chain ${cloud.chain}`
-  // );
+  console.log(`chain: ${cloud.chain}`);
+  console.log("wallet:", process.env.WALLET);
 
   await initializeBindings();
   await initBlockchain(cloud.chain);

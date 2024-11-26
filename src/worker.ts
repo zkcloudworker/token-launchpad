@@ -35,7 +35,7 @@ import {
   Field,
   Transaction,
 } from "o1js";
-import { WALLET } from "./config.js";
+const WALLET = process.env.WALLET;
 
 interface TinyTransactionParams {
   chain: string;
@@ -278,6 +278,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
       throw new Error("One or more required args are undefined");
     }
 
+    if (WALLET === undefined) throw new Error("WALLET is undefined");
+
     const contractAddress = PublicKey.fromBase58(args.tokenAddress);
     const whitelist = args.whitelist;
     console.log("Contract", contractAddress.toBase58());
@@ -422,6 +424,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     ) {
       throw new Error("One or more required args are undefined");
     }
+    if (WALLET === undefined) throw new Error("WALLET is undefined");
 
     if (txType !== task) throw new Error("txType does not match task");
 
