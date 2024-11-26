@@ -334,7 +334,7 @@ __metadata:
     o1js: "npm:2.1.0"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.7.2"
-    zkcloudworker: "npm:^0.18.19"
+    zkcloudworker: "npm:^0.18.21"
   languageName: unknown
   linkType: soft
 
@@ -455,14 +455,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.18.19":
-  version: 0.18.19
-  resolution: "zkcloudworker@npm:0.18.19"
+"zkcloudworker@npm:^0.18.21":
+  version: 0.18.21
+  resolution: "zkcloudworker@npm:0.18.21"
   dependencies:
     axios: "npm:^1.7.7"
     chalk: "npm:^4.1.2"
   peerDependencies:
     o1js: ^2.1.0
-  checksum: 10c0/859aae9e0d05633701f4102bd99912d5e83afa4e923d41fca8d693402c1e79cf7f36e468f94e0d90bd6fc5dfcdb77eab4465d7c71f65624bfa01501ac8c52751
+  checksum: 10c0/5102d80cb5e21041afa0cea4bf809bf53d48a3a43e5ded04120d0e8dcbd51352d7b38447da081769ed1664e96e537f4961b45f28deec209c7622a5d15fa3fa40
   languageName: node
   linkType: hard

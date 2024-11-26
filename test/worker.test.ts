@@ -71,6 +71,8 @@ const {
   updateWhitelistBid,
 } = args;
 
+const DELAY = chain === "local" ? 1000 : chain === "zeko" ? 3000 : 10000;
+
 const api = new TokenAPI({
   jwt: useLocalCloudWorker ? "local" : JWT,
   zkcloudworker,
@@ -305,7 +307,7 @@ describe("Token Launchpad Worker", async () => {
       console.timeEnd("deployed");
       const txStatus2 = await getTxStatusFast({ hash });
       console.log("txStatus deploy post", txStatus2);
-      if (chain !== "local") await sleep(30000);
+      if (chain !== "local") await sleep(DELAY);
       await printBalances();
     });
   }
@@ -328,7 +330,6 @@ describe("Token Launchpad Worker", async () => {
           txType: "mint",
           chain,
           fee: await fee(),
-          sender: admin,
           nonce: nonce++,
           memo,
           tokenAddress: tokenKey,
@@ -380,7 +381,7 @@ describe("Token Launchpad Worker", async () => {
       }
       Memory.info("minted");
       console.timeEnd("minted");
-      if (chain !== "local") await sleep(10000);
+      if (chain !== "local") await sleep(DELAY);
       await printBalances();
     });
   }
@@ -437,7 +438,6 @@ describe("Token Launchpad Worker", async () => {
             txType: "offer",
             chain,
             fee: await fee(),
-            sender: seller,
             nonce,
             memo: offerMemo,
             tokenAddress: tokenKey,
@@ -495,7 +495,7 @@ describe("Token Launchpad Worker", async () => {
 
       Memory.info("offered");
       console.timeEnd("offered");
-      if (chain !== "local") await sleep(10000);
+      if (chain !== "local") await sleep(DELAY);
     });
 
     it(`should buy tokens`, async () => {
@@ -518,7 +518,6 @@ describe("Token Launchpad Worker", async () => {
           txType: "buy",
           chain,
           fee: await fee(),
-          sender: buyer,
           nonce,
           memo: boughtMemo,
           tokenAddress: tokenKey,
@@ -573,7 +572,7 @@ describe("Token Launchpad Worker", async () => {
 
       Memory.info("bought");
       console.timeEnd("bought");
-      if (chain !== "local") await sleep(10000);
+      if (chain !== "local") await sleep(DELAY);
       await printBalances();
     });
 
@@ -598,7 +597,6 @@ describe("Token Launchpad Worker", async () => {
           txType: "withdrawOffer",
           chain,
           fee: await fee(),
-          sender: seller,
           nonce,
           memo: withdrawMemo,
           tokenAddress: tokenKey,
@@ -651,7 +649,7 @@ describe("Token Launchpad Worker", async () => {
 
       Memory.info("withdrawn");
       console.timeEnd("withdrawn");
-      if (chain !== "local") await sleep(10000);
+      if (chain !== "local") await sleep(DELAY);
       await printBalances();
     });
   }
@@ -679,7 +677,6 @@ describe("Token Launchpad Worker", async () => {
           txType: "transfer",
           chain,
           fee: await fee(),
-          sender: from,
           nonce,
           memo,
           tokenAddress: tokenKey,
@@ -729,7 +726,7 @@ describe("Token Launchpad Worker", async () => {
       }
       Memory.info("transferred");
       console.timeEnd("transferred");
-      if (chain !== "local") await sleep(10000);
+      if (chain !== "local") await sleep(DELAY);
       await printBalances();
     });
   }
