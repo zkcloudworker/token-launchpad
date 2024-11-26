@@ -19,8 +19,6 @@ import {
   accountBalanceMina,
   serializeTransaction,
   tokenBalance,
-} from "zkcloudworker";
-import {
   FungibleToken,
   WhitelistedFungibleToken,
   FungibleTokenAdmin,
@@ -28,14 +26,12 @@ import {
   FungibleTokenOfferContract,
   FungibleTokenBidContract,
   tokenVerificationKeys,
-} from "../src/token.js";
-import {
   buildTokenDeployTransaction,
   buildTokenTransaction,
-} from "../src/build.js";
-import { LAUNCH_FEE, TRANSACTION_FEE } from "../src/fee.js";
+  LAUNCH_FEE,
+  TRANSACTION_FEE,
+} from "zkcloudworker";
 import { zkcloudworker } from "../index.js";
-// import { JWT } from "../env.json";
 const JWT: string = process.env.JWT!;
 import {
   testKeys as devnetKeys,
