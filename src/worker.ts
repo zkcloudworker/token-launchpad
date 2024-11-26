@@ -13,8 +13,6 @@ import {
   FungibleTokenTransactionType,
   blockchain,
   TransactionMetadata,
-} from "zkcloudworker";
-import {
   FungibleToken,
   WhitelistedFungibleToken,
   FungibleTokenAdmin,
@@ -22,7 +20,11 @@ import {
   FungibleTokenOfferContract,
   FungibleTokenBidContract,
   tokenVerificationKeys,
-} from "./token.js";
+  buildTokenTransaction,
+  buildTokenDeployTransaction,
+  LAUNCH_FEE,
+  TRANSACTION_FEE,
+} from "zkcloudworker";
 import {
   VerificationKey,
   PublicKey,
@@ -33,10 +35,7 @@ import {
   Field,
   Transaction,
 } from "o1js";
-// import { WALLET } from "../env.json";
-const WALLET: string = process.env.WALLET!;
-import { buildTokenTransaction, buildTokenDeployTransaction } from "./build.js";
-import { LAUNCH_FEE, TRANSACTION_FEE } from "./fee.js";
+import { WALLET } from "./config.js";
 
 interface TinyTransactionParams {
   chain: string;

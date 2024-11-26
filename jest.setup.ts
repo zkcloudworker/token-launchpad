@@ -1,8 +1,9 @@
-import dotenv from "dotenv";
 import console from "console";
 import config from "./jest.config.js";
+import { config as dotenvConfig } from "dotenv";
 
-dotenv.config({ path: ".env.test" });
+dotenvConfig();
+
 Error.stackTraceLimit = Infinity;
 
 global.console = console;

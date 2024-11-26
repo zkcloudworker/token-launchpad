@@ -1,24 +1,23 @@
 {
   "name": "token-launchpad",
-  "version": "0.5.0",
+  "version": "0.5.8",
   "author": "DFST",
   "type": "module",
   "scripts": {
-    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest",
-    "test:watch": "NODE_OPTIONS=--experimental-vm-modules npx jest  --watch",
-    "compile": "NODE_OPTIONS=--experimental-vm-modules npx jest worker.test --chain=local --cloud=local --compile=true --deploy=false --mint=false --transfer=false",
-    "local": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest worker.test --chain=local --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
-    "lightnet": "NODE_OPTIONS=--experimental-vm-modules npx jest  worker.test --chain=lightnet --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
-    "devnet.local": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest  worker.test --chain=devnet --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
-    "devnet.zkcloudworker": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' npx jest  worker.test --chain=devnet --cloud=zkcloudworker --compile=false --deploy=true --mint=true --buy=true --transfer=true",
-    "zeko.local": "NODE_OPTIONS=--experimental-vm-modules npx jest  worker.test --chain=zeko --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
-    "zeko.zkcloudworker": "NODE_OPTIONS=--experimental-vm-modules npx jest worker.test --chain=zeko --cloud=zkcloudworker --compile=false --deploy=true --mint=true --buy=true --transfer=true"
+    "test": "jest",
+    "test:watch": "jest  --watch",
+    "compile": "jest worker.test --chain=local --cloud=local --compile=true --deploy=false --mint=false --transfer=false",
+    "local": "jest worker.test --chain=local --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
+    "lightnet": "jest  worker.test --chain=lightnet --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
+    "devnet.local": "jest  worker.test --chain=devnet --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
+    "devnet.zkcloudworker": "jest  worker.test --chain=devnet --cloud=zkcloudworker --compile=false --deploy=true --mint=true --buy=true --transfer=true",
+    "zeko.local": "jest  worker.test --chain=zeko --cloud=local --compile=false --deploy=true --mint=true --buy=true --transfer=true",
+    "zeko.zkcloudworker": "jest worker.test --chain=zeko --cloud=zkcloudworker --compile=false --deploy=true --mint=true --buy=true --transfer=true"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.9.3",
-    "dotenv": "^16.4.5",
     "jest": "^29.7.0",
     "jest-environment-node": "^29.7.0",
     "ts-jest": "^29.2.5",
@@ -28,8 +27,9 @@
   "packageManager": "yarn@4.5.2",
   "dependencies": {
     "arweave": "^1.15.5",
+    "dotenv": "^16.4.5",
     "o1js": "2.1.0",
     "tslib": "^2.3.0",
-    "zkcloudworker": "^0.18.9"
+    "zkcloudworker": "^0.18.15"
   }
 }

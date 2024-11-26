@@ -1,8 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import { Mina, VerificationKey, Field, Cache, SmartContract } from "o1js";
-import { initBlockchain, blockchain } from "zkcloudworker";
-import fs from "fs/promises";
 import {
+  initBlockchain,
+  blockchain,
   FungibleToken,
   FungibleTokenAdmin,
   WhitelistedFungibleToken,
@@ -10,12 +10,14 @@ import {
   FungibleTokenBidContract,
   FungibleTokenOfferContract,
   tokenVerificationKeys,
-} from "../../src/token.js";
+} from "zkcloudworker";
+import fs from "fs/promises";
+
 import { FungibleTokenAdmin as FungibleTokenAdminMF } from "./FungibleTokenAdmin.js";
 import { FungibleToken as FungibleTokenMF } from "./FungibleToken.js";
 
-import o1js_package from "../../node_modules/o1js/package.json";
-import zkcloudworker_package from "../../node_modules/zkcloudworker/package.json";
+import o1js_package from "../../node_modules/o1js/package.json"; //assert { type: "json" };
+import zkcloudworker_package from "../../node_modules/zkcloudworker/package.json"; //assert { type: "json" };
 const o1jsVersion = o1js_package.version;
 const zkcloudworkerVersion = zkcloudworker_package.version;
 let isDifferent = false;
@@ -41,7 +43,7 @@ export function compileContracts(chain: blockchain) {
   const networkId = chain === "mainnet" ? "mainnet" : "testnet";
 
   const cache: Cache = Cache.FileSystem(
-    networkId === "mainnet" ? "./cache-mainnet" : "./cache"
+    networkId === "mainnet" ? "./cache/mainnet" : "./cache"
   );
 
   it("should initialize a blockchain", async () => {
