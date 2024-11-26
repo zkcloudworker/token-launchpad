@@ -1,6 +1,6 @@
 {
   "name": "token-launchpad",
-  "version": "0.5.11",
+  "version": "0.5.14",
   "author": "DFST",
   "type": "module",
   "scripts": {
@@ -29,6 +29,6 @@
   "packageManager": "yarn@4.5.2",
   "dependencies": {
     "o1js": "2.1.0",
-    "zkcloudworker": "^0.18.19"
+    "zkcloudworker": "^0.18.21"
   }
 }

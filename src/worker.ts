@@ -489,7 +489,6 @@ export class TokenLauncherWorker extends zkCloudWorker {
       txType,
       chain: this.cloud.chain,
       fee,
-      sender,
       nonce,
       memo,
       tokenAddress,
