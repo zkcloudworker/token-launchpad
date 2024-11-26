@@ -1,4 +1,5 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, it } from "node:test";
+import assert from "node:assert";
 import { Mina, VerificationKey, Field, Cache, SmartContract } from "o1js";
 import {
   initBlockchain,
@@ -39,7 +40,7 @@ const contracts = [
 const verificationKeys: { name: string; verificationKey: VerificationKey }[] =
   [];
 
-export function compileContracts(chain: blockchain) {
+export async function compileContracts(chain: blockchain) {
   const networkId = chain === "mainnet" ? "mainnet" : "testnet";
 
   const cache: Cache = Cache.FileSystem(
@@ -118,10 +119,10 @@ export function compileContracts(chain: blockchain) {
       if (!MF_verificationKey) {
         throw new Error(`Verification key for ${set.MF_name} not found`);
       }
-      expect(verificationKey.hash.toJSON()).toEqual(
-        MF_verificationKey.hash.toJSON()
+      assert(
+        verificationKey.hash.toJSON() === MF_verificationKey.hash.toJSON()
       );
-      expect(verificationKey.data).toEqual(MF_verificationKey.data);
+      assert(verificationKey.data === MF_verificationKey.data);
     }
   });
 
@@ -152,7 +153,7 @@ export function compileContracts(chain: blockchain) {
         isDifferent = true;
       }
     }
-    expect(isDifferent).toBe(false);
+    assert(!isDifferent);
   });
 
   it("should save new verification keys", async () => {
