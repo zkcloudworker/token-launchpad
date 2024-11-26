@@ -17,10 +17,10 @@ import fs from "fs/promises";
 import { FungibleTokenAdmin as FungibleTokenAdminMF } from "./FungibleTokenAdmin.js";
 import { FungibleToken as FungibleTokenMF } from "./FungibleToken.js";
 
-import o1js_package from "../../node_modules/o1js/package.json"; //assert { type: "json" };
-import zkcloudworker_package from "../../node_modules/zkcloudworker/package.json"; //assert { type: "json" };
-const o1jsVersion = o1js_package.version;
-const zkcloudworkerVersion = zkcloudworker_package.version;
+// import o1js_package from "../../node_modules/o1js/package.json"; // assert { type: "json" };
+// import zkcloudworker_package from "../../node_modules/zkcloudworker/package.json" assert { type: "json" };
+// const o1jsVersion = o1js_package.version;
+// const zkcloudworkerVersion = zkcloudworker_package.version;
 let isDifferent = false;
 
 const contracts = [
@@ -47,18 +47,18 @@ export async function compileContracts(chain: blockchain) {
     networkId === "mainnet" ? "./cache/mainnet" : "./cache"
   );
 
-  it("should initialize a blockchain", async () => {
+  await it("should initialize a blockchain", async () => {
     await initBlockchain(chain);
     console.log("chain:", chain);
     console.log("networkId:", Mina.getNetworkId());
-    console.log(`o1js version:`, o1jsVersion);
-    console.log(`zkcloudworker version:`, zkcloudworkerVersion);
+    // console.log(`o1js version:`, o1jsVersion);
+    // console.log(`zkcloudworker version:`, zkcloudworkerVersion);
     for (const contract of contracts) {
       console.log(`${contract.name} contract:`, contract.contract.name);
     }
   });
 
-  it("should analyze methods", async () => {
+  await it("should analyze methods", async () => {
     console.log("Analyzing contracts methods...");
     console.time("methods analyzed");
     const methods: any[] = [];
@@ -90,7 +90,7 @@ export async function compileContracts(chain: blockchain) {
     }
   });
 
-  it("should compile", async () => {
+  await it("should compile", async () => {
     console.log("compiling...");
     for (const contract of contracts) {
       console.time(`compiled ${contract.name}`);
@@ -100,7 +100,7 @@ export async function compileContracts(chain: blockchain) {
     }
   });
 
-  it("should compare verification keys with MF versions", async () => {
+  await it("should compare verification keys with MF versions", async () => {
     const sets = [
       { name: "FungibleToken", MF_name: "FungibleTokenMF" },
       { name: "WhitelistedFungibleToken", MF_name: "FungibleTokenMF" },
@@ -126,7 +126,7 @@ export async function compileContracts(chain: blockchain) {
     }
   });
 
-  it("should verify the verification keys", async () => {
+  await it("should verify the verification keys", async () => {
     for (const contract of contracts) {
       const verificationKey = verificationKeys.find(
         (vk) => vk.name === contract.name
@@ -156,13 +156,13 @@ export async function compileContracts(chain: blockchain) {
     assert(!isDifferent);
   });
 
-  it("should save new verification keys", async () => {
+  await it("should save new verification keys", async () => {
     if (isDifferent) {
       console.log("saving new verification keys");
       const vk: any = {};
       vk[networkId] = {
-        o1js: o1jsVersion,
-        zkcloudworker: zkcloudworkerVersion,
+        // o1js: o1jsVersion,
+        // zkcloudworker: zkcloudworkerVersion,
         vk: {},
       };
 
