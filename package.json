@@ -29,6 +29,6 @@
   "packageManager": "yarn@4.5.2",
   "dependencies": {
     "o1js": "2.1.0",
-    "zkcloudworker": "^0.18.21"
+    "zkcloudworker": "^0.18.29"
   }
 }

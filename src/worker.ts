@@ -576,7 +576,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       }
     }
 
-    if (!isWhitelisted) {
+    if (!isWhitelisted || txType !== "mint") {
       if (
         TokenLauncherWorker.contractVerificationKey?.hash.toJSON() !==
           tokenVerificationKey.hash.toJSON() ||
