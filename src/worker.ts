@@ -13,6 +13,8 @@ import {
   FungibleTokenTransactionType,
   blockchain,
   TransactionMetadata,
+} from "zkcloudworker";
+import {
   FungibleToken,
   WhitelistedFungibleToken,
   FungibleTokenAdmin,
@@ -20,11 +22,11 @@ import {
   FungibleTokenOfferContract,
   FungibleTokenBidContract,
   tokenVerificationKeys,
-  buildTokenTransaction,
   buildTokenDeployTransaction,
+  buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-} from "zkcloudworker";
+} from "@minatokens/token";
 import {
   VerificationKey,
   PublicKey,

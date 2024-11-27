@@ -1,6 +1,6 @@
 {
   "name": "token-launchpad",
-  "version": "0.5.15",
+  "version": "0.6.1",
   "author": "DFST",
   "type": "module",
   "license": "Apache-2.0",
@@ -29,7 +29,9 @@
   },
   "packageManager": "yarn@4.5.2",
   "dependencies": {
+    "@minatokens/storage": "^0.1.0",
+    "@minatokens/token": "^0.1.0",
     "o1js": "2.1.0",
-    "zkcloudworker": "^0.18.29"
+    "zkcloudworker": "^0.19.0"
   }
 }

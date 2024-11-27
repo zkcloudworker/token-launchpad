@@ -2,8 +2,6 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { Mina, VerificationKey, Field, Cache, SmartContract } from "o1js";
 import {
-  initBlockchain,
-  blockchain,
   FungibleToken,
   FungibleTokenAdmin,
   WhitelistedFungibleToken,
@@ -11,7 +9,8 @@ import {
   FungibleTokenBidContract,
   FungibleTokenOfferContract,
   tokenVerificationKeys,
-} from "zkcloudworker";
+} from "@minatokens/token";
+import { initBlockchain, blockchain } from "zkcloudworker";
 import fs from "fs/promises";
 
 import { FungibleTokenAdmin as FungibleTokenAdminMF } from "./FungibleTokenAdmin.js";

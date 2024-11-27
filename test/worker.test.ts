@@ -20,6 +20,10 @@ import {
   accountBalanceMina,
   serializeTransaction,
   tokenBalance,
+  getTxStatusFast,
+  sendTx,
+} from "zkcloudworker";
+import {
   FungibleToken,
   WhitelistedFungibleToken,
   FungibleTokenAdmin,
@@ -31,9 +35,7 @@ import {
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-  getTxStatusFast,
-  sendTx,
-} from "zkcloudworker";
+} from "@minatokens/token";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
 import {
