@@ -3,6 +3,7 @@
   "version": "0.5.15",
   "author": "DFST",
   "type": "module",
+  "license": "Apache-2.0",
   "scripts": {
     "test": "NODE_NO_WARNINGS=1 node --loader=ts-node/esm --enable-source-maps -r dotenv/config --require dotenv/config --env-file=.env --test",
     "test-next": "NODE_NO_WARNINGS=1 node --enable-source-maps -r source-map-support/register -r dotenv/config --require dotenv/config --env-file=.env --import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"ts-node/esm\", pathToFileURL(\"./\"));' --test",
