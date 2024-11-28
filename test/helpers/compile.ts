@@ -1,40 +1,90 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { Mina, VerificationKey, Field, Cache, SmartContract } from "o1js";
+import { Mina, VerificationKey, Field, Cache } from "o1js";
 import {
-  initBlockchain,
-  blockchain,
   FungibleToken,
   FungibleTokenAdmin,
   WhitelistedFungibleToken,
   FungibleTokenWhitelistedAdmin,
   FungibleTokenBidContract,
   FungibleTokenOfferContract,
+  tokenContracts,
   tokenVerificationKeys,
-} from "zkcloudworker";
+} from "@minatokens/token";
+import { initBlockchain, blockchain } from "zkcloudworker";
 import fs from "fs/promises";
 
 import { FungibleTokenAdmin as FungibleTokenAdminMF } from "./FungibleTokenAdmin.js";
 import { FungibleToken as FungibleTokenMF } from "./FungibleToken.js";
 
-// import o1js_package from "../../node_modules/o1js/package.json"; // assert { type: "json" };
-// import zkcloudworker_package from "../../node_modules/zkcloudworker/package.json" assert { type: "json" };
-// const o1jsVersion = o1js_package.version;
-// const zkcloudworkerVersion = zkcloudworker_package.version;
+let o1jsVersion: string;
+let zkcloudworkerVersion: string;
 let isDifferent = false;
 
-const contracts = [
-  { name: "FungibleToken", contract: FungibleToken },
-  { name: "FungibleTokenAdmin", contract: FungibleTokenAdmin },
-  { name: "WhitelistedFungibleToken", contract: WhitelistedFungibleToken },
+type CompilableInternal = {
+  name: string;
+  compile({ cache }: { cache: Cache }): Promise<{
+    verificationKey: {
+      data: string;
+      hash: Field;
+    };
+  }>;
+  analyzeMethods(): Promise<
+    Record<
+      string,
+      {
+        rows: number;
+      }
+    >
+  >;
+};
+
+type Contracts = {
+  o1js: string;
+  zkcloudworker: string;
+  vk: {
+    [key: string]: {
+      hash: string;
+      data: string;
+      contract: string;
+      type: "token" | "admin" | "upgrade" | "user";
+    };
+  };
+};
+
+const contracts: {
+  name: string;
+  contract: CompilableInternal;
+  type: "token" | "admin" | "upgrade" | "user" | "check";
+}[] = [
+  { name: "FungibleToken", contract: FungibleToken, type: "token" },
+  { name: "FungibleTokenAdmin", contract: FungibleTokenAdmin, type: "admin" },
+  {
+    name: "WhitelistedFungibleToken",
+    contract: WhitelistedFungibleToken,
+    type: "token",
+  },
   {
     name: "FungibleTokenWhitelistedAdmin",
     contract: FungibleTokenWhitelistedAdmin,
+    type: "admin",
   },
-  { name: "FungibleTokenBidContract", contract: FungibleTokenBidContract },
-  { name: "FungibleTokenOfferContract", contract: FungibleTokenOfferContract },
-  { name: "FungibleTokenAdminMF", contract: FungibleTokenAdminMF },
-  { name: "FungibleTokenMF", contract: FungibleTokenMF },
+  {
+    name: "FungibleTokenBidContract",
+    contract: FungibleTokenBidContract,
+    type: "user",
+  },
+  {
+    name: "FungibleTokenOfferContract",
+    contract: FungibleTokenOfferContract,
+    type: "user",
+  },
+  {
+    name: "FungibleTokenAdminMF",
+    contract: FungibleTokenAdminMF,
+    type: "check",
+  },
+  { name: "FungibleTokenMF", contract: FungibleTokenMF, type: "check" },
 ];
 
 const verificationKeys: { name: string; verificationKey: VerificationKey }[] =
@@ -51,8 +101,14 @@ export async function compileContracts(chain: blockchain) {
     await initBlockchain(chain);
     console.log("chain:", chain);
     console.log("networkId:", Mina.getNetworkId());
-    // console.log(`o1js version:`, o1jsVersion);
-    // console.log(`zkcloudworker version:`, zkcloudworkerVersion);
+    o1jsVersion = JSON.parse(
+      await fs.readFile("./node_modules/o1js/package.json", "utf8")
+    ).version;
+    console.log(`o1js version:`, o1jsVersion);
+    zkcloudworkerVersion = JSON.parse(
+      await fs.readFile("./node_modules/zkcloudworker/package.json", "utf8")
+    ).version;
+    console.log(`zkcloudworker version:`, zkcloudworkerVersion);
     for (const contract of contracts) {
       console.log(`${contract.name} contract:`, contract.contract.name);
     }
@@ -137,12 +193,14 @@ export async function compileContracts(chain: blockchain) {
         throw new Error(`Verification key for ${contract.name} not found`);
       }
       if (!recordedVerificationKey) {
-        console.error(
-          `Recorded verification key for ${contract.name} not found`
-        );
+        if (contract.type !== "check")
+          console.error(
+            `Recorded verification key for ${contract.name} not found`
+          );
         isDifferent = true;
-      }
-      if (verificationKey.hash.toJSON() !== recordedVerificationKey.hash) {
+      } else if (
+        verificationKey.hash.toJSON() !== recordedVerificationKey.hash
+      ) {
         console.error(`Verification key for ${contract.name} is different`);
         isDifferent = true;
       }
@@ -157,25 +215,47 @@ export async function compileContracts(chain: blockchain) {
   });
 
   await it("should save new verification keys", async () => {
+    isDifferent = true;
     if (isDifferent) {
       console.log("saving new verification keys");
-      const vk: any = {};
-      vk[networkId] = {
-        // o1js: o1jsVersion,
-        // zkcloudworker: zkcloudworkerVersion,
-        vk: {},
+      let vk: Contracts = {
+        o1js: o1jsVersion,
+        zkcloudworker: zkcloudworkerVersion,
+        vk: contracts
+          .filter((c) => c.type !== "check")
+          .reduce(
+            (acc, c) => ({
+              ...acc,
+              [c.name]: {
+                hash: (c.contract as any)._verificationKey.hash.toJSON(),
+                data: (c.contract as any)._verificationKey.data,
+                type: c.type,
+              },
+            }),
+            {}
+          ),
       };
 
-      for (const contract of verificationKeys) {
-        vk[networkId]["vk"][contract.name] = {
-          hash: contract.verificationKey.hash.toJSON(),
-          data: contract.verificationKey.data,
-        };
-      }
+      let contractList = contracts
+        .filter((c) => c.type !== "check")
+        .reduce(
+          (acc, c) => ({
+            ...acc,
+            [c.name]: "ContractStart" + c.name + "ContractEnd",
+          }),
+          {}
+        );
+
+      const json: any = {};
+      json[networkId] = vk;
+      const contractsString = JSON.stringify({ contractList }, null, 2)
+        .replace(/"ContractStart/g, "")
+        .replace(/ContractEnd"/g, "");
+      const vkString = JSON.stringify(json, null, 2);
 
       await fs.writeFile(
         `./vk/${networkId}-verification-keys.json`,
-        JSON.stringify(vk, null, 2)
+        `${vkString}\n\n${contractsString}`
       );
     }
   });

@@ -18,22 +18,20 @@ import {
   fee,
   initBlockchain,
   accountBalanceMina,
-  serializeTransaction,
+  createTransactionPayloads,
   tokenBalance,
+  getTxStatusFast,
+  sendTx,
+} from "zkcloudworker";
+import {
   FungibleToken,
-  WhitelistedFungibleToken,
   FungibleTokenAdmin,
-  FungibleTokenWhitelistedAdmin,
   FungibleTokenOfferContract,
-  FungibleTokenBidContract,
-  tokenVerificationKeys,
   buildTokenDeployTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-  getTxStatusFast,
-  sendTx,
-} from "zkcloudworker";
+} from "@minatokens/token";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
 import {
@@ -267,22 +265,15 @@ describe("Token Launchpad Worker", async () => {
         });
 
       tx.sign([admin.key, adminKey.key, tokenKey.key]);
-      const serializedTransaction = serializeTransaction(tx);
-      const transaction = tx.toJSON();
-      const txJSON = JSON.parse(transaction);
-      let signedData = JSON.stringify({ zkappCommand: txJSON });
+      const payloads = createTransactionPayloads(tx);
       console.log("sending deploy transaction");
       const jobId = await api.sendDeployTransaction({
         txType: "deploy",
-        serializedTransaction,
-        signedData,
+        ...payloads,
         adminContractAddress: adminKey.toBase58(),
         tokenAddress: tokenKey.toBase58(),
-        senderAddress: admin.toBase58(),
-        chain,
         symbol,
         uri: src,
-        sendTransaction: true,
         whitelist: deployedWhitelist,
       });
       console.log("deploy jobId:", jobId);
@@ -342,22 +333,16 @@ describe("Token Launchpad Worker", async () => {
 
         tx.sign([admin.key]);
 
-        const serializedTransaction = serializeTransaction(tx);
-        const transaction = tx.toJSON();
-        const txJSON = JSON.parse(transaction);
-        let signedData = JSON.stringify({ zkappCommand: txJSON });
+        const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.sendTransaction({
           txType: "mint",
-          serializedTransaction,
-          signedData,
+          ...payloads,
           tokenAddress: tokenKey.toBase58(),
           from: admin.toBase58(),
-          chain,
           symbol,
           amount: Number(amount.toBigInt()),
           to: to.toBase58(),
-          sendTransaction: true,
         });
         console.log("mint jobId:", jobId);
         assert(jobId !== undefined, "Mint jobId is undefined");
@@ -454,21 +439,17 @@ describe("Token Launchpad Worker", async () => {
         const transaction = tx.toJSON();
         const txJSON = JSON.parse(transaction);
 
-        const serializedTransaction = serializeTransaction(tx);
-        let signedData = JSON.stringify({ zkappCommand: txJSON });
+        const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.sendTransaction({
           txType: "offer",
-          serializedTransaction,
-          signedData,
+          ...payloads,
           tokenAddress: tokenKey.toBase58(),
-          chain,
           symbol,
           amount: Number(sellAmount.toBigInt()),
           from: seller.toBase58(),
           to: contract.toBase58(),
           whitelist: deployedWhitelist,
-          sendTransaction: true,
           price: Number(price.toBigInt()),
         });
         console.log("offer jobId:", jobId);
@@ -533,20 +514,16 @@ describe("Token Launchpad Worker", async () => {
         const transaction = tx.toJSON();
         const txJSON = JSON.parse(transaction);
 
-        const serializedTransaction = serializeTransaction(tx);
-        let signedData = JSON.stringify({ zkappCommand: txJSON });
+        const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.sendTransaction({
           txType: "buy",
-          serializedTransaction,
-          signedData,
+          ...payloads,
           tokenAddress: tokenKey.toBase58(),
-          chain,
           symbol,
           amount: Number(boughtAmount.toBigInt()),
           from: contract.toBase58(),
           to: buyer.toBase58(),
-          sendTransaction: true,
           price: Number(price.toBigInt()),
         });
         console.log("buy jobId:", jobId);
@@ -611,20 +588,16 @@ describe("Token Launchpad Worker", async () => {
         const transaction = tx.toJSON();
         const txJSON = JSON.parse(transaction);
 
-        const serializedTransaction = serializeTransaction(tx);
-        let signedData = JSON.stringify({ zkappCommand: txJSON });
+        const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.sendTransaction({
           txType: "withdrawOffer",
-          serializedTransaction,
-          signedData,
+          ...payloads,
           tokenAddress: tokenKey.toBase58(),
-          chain,
           symbol,
           amount: Number(withdrawAmount.toBigInt()),
           from: contract.toBase58(),
           to: seller.toBase58(),
-          sendTransaction: true,
         });
         console.log("withdraw jobId:", jobId);
         assert(jobId !== undefined, "Withdraw jobId is undefined");
@@ -688,21 +661,15 @@ describe("Token Launchpad Worker", async () => {
         });
 
         tx.sign([from.key]);
-        const serializedTransaction = serializeTransaction(tx);
-        const transaction = tx.toJSON();
-        const txJSON = JSON.parse(transaction);
-        let signedData = JSON.stringify({ zkappCommand: txJSON });
+        const payloads = createTransactionPayloads(tx);
         const jobId = await api.sendTransaction({
           txType: "transfer",
-          serializedTransaction,
-          signedData,
+          ...payloads,
           tokenAddress: tokenKey.toBase58(),
-          chain,
           symbol,
           amount: Number(amount.toBigInt()),
           from: from.toBase58(),
           to: to.toBase58(),
-          sendTransaction: true,
         });
         console.log("transfer jobId:", jobId);
         assert(jobId !== undefined, "Transfer jobId is undefined");
