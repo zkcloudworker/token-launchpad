@@ -300,9 +300,10 @@ describe("Token Launchpad Worker", async () => {
       const result = await api.waitForJobResult({ jobId, printLogs: true });
 
       assert(result !== undefined, "Deploy result is undefined");
-      const resultJSON = JSON.parse(result);
-      assert(resultJSON.success, "Deploy result is not success");
-      const hash = resultJSON.hash;
+      const proofsJSON = JSON.parse(result);
+      const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+      assert(resultJSON?.success, "Deploy result is not success");
+      const hash = resultJSON?.hash;
       assert(hash !== undefined, "Deploy hash is undefined");
       console.log("deploy hash:", hash);
       console.time("deploy tx included");
@@ -369,9 +370,10 @@ describe("Token Launchpad Worker", async () => {
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
         assert(result !== undefined, "Mint result is undefined");
-        const resultJSON = JSON.parse(result);
-        assert(resultJSON.success, "Mint result is not success");
-        const hash = resultJSON.hash;
+        const proofsJSON = JSON.parse(result);
+        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+        assert(resultJSON?.success, "Mint result is not success");
+        const hash = resultJSON?.hash;
         assert(hash !== undefined, "Mint hash is undefined");
         console.log("mint hash:", hash);
         hashArray.push(hash);
@@ -478,9 +480,10 @@ describe("Token Launchpad Worker", async () => {
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
         assert(result !== undefined, "Offer result is undefined");
-        const resultJSON = JSON.parse(result);
-        assert(resultJSON.success, "Offer result is not success");
-        const hash = resultJSON.hash;
+        const proofsJSON = JSON.parse(result);
+        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+        assert(resultJSON?.success, "Offer result is not success");
+        const hash = resultJSON?.hash;
         assert(hash !== undefined, "Offer hash is undefined");
         console.log("offer hash:", hash);
         hashArray.push(hash);
@@ -553,9 +556,10 @@ describe("Token Launchpad Worker", async () => {
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
         assert(result !== undefined, "Buy result is undefined");
-        const resultJSON = JSON.parse(result);
-        assert(resultJSON.success, "Buy result is not success");
-        const hash = resultJSON.hash;
+        const proofsJSON = JSON.parse(result);
+        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+        assert(resultJSON?.success, "Buy result is not success");
+        const hash = resultJSON?.hash;
         assert(hash !== undefined, "Buy hash is undefined");
         console.log("buy hash:", hash);
         hashArray.push(hash);
@@ -627,9 +631,10 @@ describe("Token Launchpad Worker", async () => {
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
         assert(result !== undefined, "Withdraw result is undefined");
-        const resultJSON = JSON.parse(result);
-        assert(resultJSON.success, "Withdraw result is not success");
-        const hash = resultJSON.hash;
+        const proofsJSON = JSON.parse(result);
+        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+        assert(resultJSON?.success, "Withdraw result is not success");
+        const hash = resultJSON?.hash;
         assert(hash !== undefined, "Withdraw hash is undefined");
         console.log("withdraw hash:", hash);
         hashArray.push(hash);
@@ -700,9 +705,10 @@ describe("Token Launchpad Worker", async () => {
         const result = await api.waitForJobResult({ jobId, printLogs: true });
 
         assert(result !== undefined, "Transfer result is undefined");
-        const resultJSON = JSON.parse(result);
-        assert(resultJSON.success, "Transfer result is not success");
-        const hash = resultJSON.hash;
+        const proofsJSON = JSON.parse(result);
+        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
+        assert(resultJSON?.success, "Deploy result is not success");
+        const hash = resultJSON?.hash;
         assert(hash !== undefined, "Transfer hash is undefined");
         console.log("transfer hash:", hash);
         hashArray.push(hash);
