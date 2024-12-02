@@ -12,12 +12,12 @@ export function processArguments(): {
   sell: boolean;
   withdrawBid: boolean;
   withdrawOffer: boolean;
-  whitelistAdmin: boolean;
+  advancedAdmin: boolean;
   whitelistOffer: boolean;
   whitelistBid: boolean;
-  updateWhitelistAdmin: boolean;
-  updateWhitelistOffer: boolean;
-  updateWhitelistBid: boolean;
+  updateAdminWhitelist: boolean;
+  updateOfferWhitelist: boolean;
+  updateBidWhitelist: boolean;
   useLocalCloudWorker: boolean;
   useRandomTokenAddress: boolean;
 } {
@@ -44,11 +44,11 @@ export function processArguments(): {
     withdrawOffer: process.env.WITHDRAW_OFFER !== "false",
     useLocalCloudWorker: process.env.CLOUD !== "zkcloudworker" ? true : false,
     useRandomTokenAddress: process.env.RANDOM !== "false",
-    whitelistAdmin: process.env.WHITELIST_ADMIN !== "false",
-    whitelistOffer: process.env.WHITELIST_OFFER !== "false",
-    whitelistBid: process.env.WHITELIST_BID !== "false",
-    updateWhitelistAdmin: process.env.UPDATE_WHITELIST_ADMIN !== "false",
-    updateWhitelistOffer: process.env.UPDATE_WHITELIST_OFFER !== "false",
-    updateWhitelistBid: process.env.UPDATE_WHITELIST_BID !== "false",
+    advancedAdmin: process.env.ADVANCED_ADMIN === "true",
+    whitelistBid: process.env.WHITELIST_BID == "true",
+    whitelistOffer: process.env.WHITELIST_OFFER === "true",
+    updateBidWhitelist: process.env.UPDATE_WHITELIST_BID === "true",
+    updateAdminWhitelist: process.env.UPDATE_WHITELIST_ADMIN === "true",
+    updateOfferWhitelist: process.env.UPDATE_WHITELIST_OFFER === "true",
   };
 }

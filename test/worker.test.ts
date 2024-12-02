@@ -9,6 +9,7 @@ import {
   setNumberOfWorkers,
   UInt8,
   TokenId,
+  Bool,
 } from "o1js";
 import {
   TokenAPI,
@@ -31,6 +32,8 @@ import {
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
+  AdvancedFungibleToken,
+  FungibleTokenAdvancedAdmin,
 } from "@minatokens/token";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
@@ -61,12 +64,12 @@ const {
   withdrawOffer,
   useRandomTokenAddress,
   useLocalCloudWorker,
-  whitelistAdmin,
+  advancedAdmin,
   whitelistOffer,
   whitelistBid,
-  updateWhitelistAdmin,
-  updateWhitelistOffer,
-  updateWhitelistBid,
+  updateAdminWhitelist,
+  updateOfferWhitelist,
+  updateBidWhitelist,
 } = args;
 
 const DELAY = chain === "local" ? 1000 : chain === "zeko" ? 3000 : 10000;
@@ -210,6 +213,17 @@ describe("Token Launchpad Worker", async () => {
       const tokenVerificationKey = (await FungibleToken.compile({ cache }))
         .verificationKey;
       console.timeEnd("FungibleToken compiled");
+      console.time("FungibleTokenAdvancedAdmin compiled");
+      const advancedAdminVerificationKey = (
+        await FungibleTokenAdvancedAdmin.compile({ cache })
+      ).verificationKey;
+      console.timeEnd("FungibleTokenAdvancedAdmin compiled");
+
+      console.time("AdvancedFungibleToken compiled");
+      const advancedTokenVerificationKey = (
+        await AdvancedFungibleToken.compile({ cache })
+      ).verificationKey;
+      console.timeEnd("AdvancedFungibleToken compiled");
       console.time("FungibleTokenOffer compiled");
       const offerVerificationKey = (
         await FungibleTokenOfferContract.compile({
@@ -249,6 +263,7 @@ describe("Token Launchpad Worker", async () => {
       const { tx, whitelist: deployedWhitelist } =
         await buildTokenDeployTransaction({
           chain,
+          adminType: advancedAdmin ? "advanced" : "standard",
           fee: await fee(),
           sender: admin,
           nonce: Number(Mina.getAccount(admin).nonce.toBigint()),
@@ -258,17 +273,21 @@ describe("Token Launchpad Worker", async () => {
           tokenAddress: tokenKey,
           uri: src,
           symbol,
-          whitelist: whitelistAdmin ? whitelist : undefined,
+          whitelist: advancedAdmin ? whitelist : undefined,
+          anyoneCanMint: Bool(false),
+          requireAdminSignatureForMint: Bool(false),
           provingKey: wallet,
           provingFee: UInt64.from(LAUNCH_FEE),
           decimals: UInt8.from(9),
         });
+      console.log("deployedWhitelist", deployedWhitelist);
 
       tx.sign([admin.key, adminKey.key, tokenKey.key]);
       const payloads = createTransactionPayloads(tx);
       console.log("sending deploy transaction");
       const jobId = await api.sendDeployTransaction({
-        txType: "deploy",
+        txType: "launch",
+        adminType: advancedAdmin ? "advanced" : "standard",
         ...payloads,
         adminContractAddress: adminKey.toBase58(),
         tokenAddress: tokenKey.toBase58(),
@@ -308,7 +327,7 @@ describe("Token Launchpad Worker", async () => {
       console.time("minted");
       await fetchMinaAccount({ publicKey: admin, force: true });
       let nonce = Number(Mina.getAccount(admin).nonce.toBigint());
-      const toArray: PublicKey[] = [user1, user2];
+      const toArray: TestPublicKey[] = [user1, user2];
       const hashArray: string[] = [];
       const amount = UInt64.from(1000e9);
       const memo =
@@ -319,6 +338,7 @@ describe("Token Launchpad Worker", async () => {
       for (const to of toArray) {
         const { tx } = await buildTokenTransaction({
           txType: "mint",
+          sender: admin,
           chain,
           fee: await fee(),
           nonce: nonce++,
@@ -421,6 +441,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, whitelist: deployedWhitelist } =
           await buildTokenTransaction({
             txType: "offer",
+            sender: seller,
             chain,
             fee: await fee(),
             nonce,
@@ -497,6 +518,7 @@ describe("Token Launchpad Worker", async () => {
         console.log("buyer:", buyer.toBase58());
         const { tx } = await buildTokenTransaction({
           txType: "buy",
+          sender: buyer,
           chain,
           fee: await fee(),
           nonce,
@@ -572,6 +594,7 @@ describe("Token Launchpad Worker", async () => {
         console.log("seller:", seller.toBase58());
         const { tx } = await buildTokenTransaction({
           txType: "withdrawOffer",
+          sender: seller,
           chain,
           fee: await fee(),
           nonce,
@@ -648,6 +671,7 @@ describe("Token Launchpad Worker", async () => {
         console.log("Building transfer transaction...");
         const { tx } = await buildTokenTransaction({
           txType: "transfer",
+          sender: from,
           chain,
           fee: await fee(),
           nonce,

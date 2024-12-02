@@ -1,6 +1,6 @@
 {
   "name": "token-launchpad",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "author": "DFST",
   "type": "module",
   "license": "Apache-2.0",
@@ -10,13 +10,13 @@
     "test:watch": "node --test --watch test/**/*.test.{js,ts}",
     "compile": "yarn test ./test/compile-testnet.test.ts && yarn test ./test/compile-mainnet.test.ts",
     "local": "CHAIN=local CLOUD=local COMPILE=false DEBUG=false yarn test ./test/worker.test.ts",
-    "local:whitelist": "CHAIN=local CLOUD=local COMPILE=false WHITELIST_ADMIN=true WHITELIST_OFFER=true npm run test ./test/worker.test.ts",
+    "local:advanced": "CHAIN=local CLOUD=local COMPILE=false ADVANCED_ADMIN=true WHITELIST_OFFER=true npm run test ./test/worker.test.ts",
     "lightnet": "CHAIN=lightnet CLOUD=local COMPILE=false npm run test ./test/worker.test.ts",
     "devnet:local": "CHAIN=devnet CLOUD=local COMPILE=false npm run test ./test/worker.test.ts",
     "devnet:zkcloudworker": "CHAIN=devnet CLOUD=zkcloudworker COMPILE=false npm run test ./test/worker.test.ts",
     "zeko:local": "CHAIN=zeko CLOUD=local COMPILE=false yarn test worker.test",
     "zeko:zkcloudworker": "CHAIN=zeko CLOUD=zkcloudworker COMPILE=false yarn test ./test/worker.test.ts",
-    "zeko:zkcloudworker:whitelist": "CHAIN=zeko CLOUD=zkcloudworker COMPILE=false WHITELIST_ADMIN=true WHITELIST_OFFER=true yarn test ./test/worker.test.ts"
+    "zeko:zkcloudworker:advanced": "CHAIN=zeko CLOUD=zkcloudworker COMPILE=false ADVANCED_ADMIN=true WHITELIST_OFFER=true yarn test ./test/worker.test.ts"
   },
   "node": {
     "version": ">=20.0.0"
@@ -29,10 +29,10 @@
   },
   "packageManager": "yarn@4.5.2",
   "dependencies": {
-    "@minatokens/api": "^0.2.3",
-    "@minatokens/storage": "^0.1.0",
-    "@minatokens/token": "^0.2.3",
+    "@minatokens/api": "^0.3.2",
+    "@minatokens/storage": "^0.3.2",
+    "@minatokens/token": "^0.3.11",
     "o1js": "2.1.0",
-    "zkcloudworker": "^0.20.3"
+    "zkcloudworker": "^0.20.4"
   }
 }

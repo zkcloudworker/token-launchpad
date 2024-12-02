@@ -18,7 +18,7 @@ import {
 } from "@minatokens/api";
 import {
   FungibleToken,
-  WhitelistedFungibleToken,
+  AdvancedFungibleToken,
   tokenContracts,
   tokenVerificationKeys,
   buildTokenDeployTransaction,
@@ -67,14 +67,14 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   private async compile(params: {
     compileAdmin?: boolean;
-    isWhitelisted?: boolean;
+    isAdvanced?: boolean;
     verificationKeyHashes: string[];
     // compileOffer?: boolean;
     // compileBid?: boolean;
   }): Promise<void> {
     const {
       compileAdmin = false,
-      isWhitelisted = false,
+      isAdvanced = false,
       verificationKeyHashes,
     } = params;
     try {
@@ -90,9 +90,9 @@ export class TokenLauncherWorker extends zkCloudWorker {
         if (!item) throw new Error(`Verification key for ${hash} not found`);
         switch (item.type) {
           case "token":
-            if (isWhitelisted) {
+            if (isAdvanced) {
               const verificationKey = (
-                await WhitelistedFungibleToken.compile({
+                await AdvancedFungibleToken.compile({
                   cache: this.cache,
                 })
               ).verificationKey;
@@ -138,140 +138,6 @@ export class TokenLauncherWorker extends zkCloudWorker {
         }
       }
 
-      // if (compileAdmin === true && isWhitelisted === false) {
-      //   if (TokenLauncherWorker.contractAdminVerificationKey === undefined) {
-      //     console.time("compiled FungibleTokenAdmin");
-      //     TokenLauncherWorker.contractAdminVerificationKey = (
-      //       await FungibleTokenAdmin.compile({
-      //         cache: this.cache,
-      //       })
-      //     ).verificationKey;
-      //     console.timeEnd("compiled FungibleTokenAdmin");
-      //     const vk =
-      //       tokenContracts[
-      //         this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //       ].vk.FungibleTokenAdmin;
-      //     if (
-      //       TokenLauncherWorker.contractAdminVerificationKey?.hash.toJSON() !==
-      //         vk.hash ||
-      //       TokenLauncherWorker.contractAdminVerificationKey?.data !== vk.data
-      //     )
-      //       throw new Error("FungibleTokenAdmin verification keys has changed");
-      //   }
-      // }
-      // if (compileAdmin === true && isWhitelisted === true) {
-      //   if (TokenLauncherWorker.whitelistedAdminVerificationKey === undefined) {
-      //     console.time("compiled FungibleTokenWhitelistedAdmin");
-      //     TokenLauncherWorker.whitelistedAdminVerificationKey = (
-      //       await FungibleTokenWhitelistedAdmin.compile({
-      //         cache: this.cache,
-      //       })
-      //     ).verificationKey;
-      //     console.timeEnd("compiled FungibleTokenWhitelistedAdmin");
-      //     const vk =
-      //       tokenContracts[
-      //         this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //       ].vk.FungibleTokenWhitelistedAdmin;
-      //     if (
-      //       TokenLauncherWorker.whitelistedAdminVerificationKey?.hash.toJSON() !==
-      //         vk.hash ||
-      //       TokenLauncherWorker.whitelistedAdminVerificationKey?.data !==
-      //         vk.data
-      //     )
-      //       throw new Error(
-      //         "FungibleTokenWhitelistedAdmin verification keys has changed"
-      //       );
-      //   }
-      // }
-
-      // if (isWhitelisted === false) {
-      //   if (TokenLauncherWorker.contractVerificationKey === undefined) {
-      //     console.time("compiled FungibleToken");
-      //     TokenLauncherWorker.contractVerificationKey = (
-      //       await FungibleToken.compile({
-      //         cache: this.cache,
-      //       })
-      //     ).verificationKey;
-      //     console.timeEnd("compiled FungibleToken");
-      //     const vk =
-      //       tokenContracts[
-      //         this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //       ].vk.FungibleToken;
-      //     if (
-      //       TokenLauncherWorker.contractVerificationKey?.hash.toJSON() !==
-      //         vk.hash ||
-      //       TokenLauncherWorker.contractVerificationKey?.data !== vk.data
-      //     )
-      //       throw new Error("FungibleToken verification keys has changed");
-      //   }
-      // }
-      // if (isWhitelisted === true) {
-      //   if (
-      //     TokenLauncherWorker.whitelistedFungibleTokenVerificationKey ===
-      //     undefined
-      //   ) {
-      //     console.time("compiled WhitelistedFungibleToken");
-      //     TokenLauncherWorker.whitelistedFungibleTokenVerificationKey = (
-      //       await WhitelistedFungibleToken.compile({
-      //         cache: this.cache,
-      //       })
-      //     ).verificationKey;
-      //     console.timeEnd("compiled WhitelistedFungibleToken");
-      //     const vk =
-      //       tokenContracts[
-      //         this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //       ].vk.WhitelistedFungibleToken;
-      //     if (
-      //       TokenLauncherWorker.whitelistedFungibleTokenVerificationKey?.hash.toJSON() !==
-      //         vk.hash ||
-      //       TokenLauncherWorker.whitelistedFungibleTokenVerificationKey
-      //         ?.data !== vk.data
-      //     )
-      //       throw new Error(
-      //         "WhitelistedFungibleToken verification keys has changed"
-      //       );
-      //   }
-      // }
-      // if (compileOffer === true) {
-      //   console.time("compiled FungibleTokenOfferContract");
-      //   TokenLauncherWorker.offerVerificationKey = (
-      //     await FungibleTokenOfferContract.compile({
-      //       cache: this.cache,
-      //     })
-      //   ).verificationKey;
-      //   console.timeEnd("compiled FungibleTokenOfferContract");
-      //   const vk =
-      //     tokenContracts[
-      //       this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //     ].vk.FungibleTokenOfferContract;
-      //   if (
-      //     TokenLauncherWorker.offerVerificationKey?.hash.toJSON() !== vk.hash ||
-      //     TokenLauncherWorker.offerVerificationKey?.data !== vk.data
-      //   )
-      //     throw new Error(
-      //       "FungibleTokenOfferContract verification keys has changed"
-      //     );
-      // }
-      // if (compileBid === true) {
-      //   console.time("compiled FungibleTokenBidContract");
-      //   TokenLauncherWorker.bidVerificationKey = (
-      //     await FungibleTokenBidContract.compile({
-      //       cache: this.cache,
-      //     })
-      //   ).verificationKey;
-      //   console.timeEnd("compiled FungibleTokenBidContract");
-      //   const vk =
-      //     tokenContracts[
-      //       this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
-      //     ].vk.FungibleTokenBidContract;
-      //   if (
-      //     TokenLauncherWorker.bidVerificationKey?.hash.toJSON() !== vk.hash ||
-      //     TokenLauncherWorker.bidVerificationKey?.data !== vk.data
-      //   )
-      //     throw new Error(
-      //       "FungibleTokenBidContract verification keys has changed"
-      //     );
-      // }
       console.timeEnd("compiled");
     } catch (error) {
       console.error("Error in compile, restarting container", error);
@@ -294,9 +160,13 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   public async execute(transactions: string[]): Promise<string | undefined> {
     if (transactions.length === 0) throw new Error("transactions is empty");
-    switch (this.cloud.task) {
-      case "deploy":
-        return await this.deploy(transactions[0]);
+    const task = this.cloud.task as
+      | FungibleTokenTransactionType
+      | "launch"
+      | "tiny";
+    switch (task) {
+      case "launch":
+        return await this.launch(transactions[0]);
 
       case "transfer":
       case "mint":
@@ -306,10 +176,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
       case "buy":
       case "withdrawOffer":
       case "withdrawBid":
-      case "updateWhitelistBid":
-      case "updateWhitelistOffer":
-      case "updateWhitelistAdmin":
-        return await this.transaction(transactions[0], this.cloud.task);
+      case "updateBidWhitelist":
+      case "updateOfferWhitelist":
+      case "updateAdminWhitelist":
+        return await this.transaction(transactions[0], task);
 
       case "tiny":
         return await this.tinyTx(transactions[0]);
@@ -323,7 +193,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     return JSON.stringify(result, null, 2);
   }
 
-  private async deploy(transaction: string): Promise<string> {
+  private async launch(transaction: string): Promise<string> {
     const args: DeployTransaction = JSON.parse(transaction);
     if (
       args.adminContractAddress === undefined ||
@@ -362,9 +232,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
     const {
       tx: txNew,
-      isWhitelisted,
+      isAdvanced,
       verificationKeyHashes,
     } = await buildTokenDeployTransaction({
+      adminType: args.adminType,
       chain: this.cloud.chain,
       fee,
       sender,
@@ -375,7 +246,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       adminAddress: sender,
       uri: args.uri,
       symbol: args.symbol,
-      whitelist,
+      whitelist: args.whitelist,
       decimals: UInt8.from(9),
       provingKey: PublicKey.fromBase58(WALLET),
       provingFee: UInt64.from(LAUNCH_FEE),
@@ -387,55 +258,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
     if (tx === undefined) throw new Error("tx is undefined");
     await this.compile({
       compileAdmin: true,
-      isWhitelisted,
+      isAdvanced,
       verificationKeyHashes,
     });
 
-    // if (
-    //   (!isWhitelisted &&
-    //     (TokenLauncherWorker.contractAdminVerificationKey === undefined ||
-    //       TokenLauncherWorker.contractVerificationKey === undefined)) ||
-    //   (isWhitelisted &&
-    //     (TokenLauncherWorker.whitelistedAdminVerificationKey === undefined ||
-    //       TokenLauncherWorker.whitelistedFungibleTokenVerificationKey ===
-    //         undefined))
-    // )
-    //   throw new Error("Contract verification keys are undefined");
-    // if (!isWhitelisted) {
-    //   if (
-    //     TokenLauncherWorker.contractVerificationKey?.hash.toJSON() !==
-    //       tokenVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.contractVerificationKey?.data !==
-    //       tokenVerificationKey.data
-    //   )
-    //     throw new Error("FungibleToken verification keys do not match");
-    //   if (
-    //     TokenLauncherWorker.contractAdminVerificationKey?.hash.toJSON() !==
-    //       adminVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.contractAdminVerificationKey?.data !==
-    //       adminVerificationKey.data
-    //   )
-    //     throw new Error("FungibleTokenAdmin verification keys do not match");
-    // }
-    // if (isWhitelisted) {
-    //   if (
-    //     TokenLauncherWorker.whitelistedAdminVerificationKey?.hash.toJSON() !==
-    //       adminVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.whitelistedAdminVerificationKey?.data !==
-    //       adminVerificationKey.data
-    //   )
-    //     throw new Error(
-    //       "FungibleTokenWhitelistedAdmin verification keys do not match"
-    //     );
-    // } else {
-    //   if (
-    //     TokenLauncherWorker.contractAdminVerificationKey?.hash.toJSON() !==
-    //       adminVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.contractAdminVerificationKey?.data !==
-    //       adminVerificationKey.data
-    //   )
-    //     throw new Error("FungibleTokenAdmin verification keys do not match");
-    // }
     console.time("proved tx");
     const txProved = await tx.prove();
     const txJSON = txProved.toJSON();
@@ -474,7 +300,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   private async transaction(
     transaction: string,
-    task: string
+    task: FungibleTokenTransactionType
   ): Promise<string> {
     const args: TokenTransaction = JSON.parse(transaction);
     const { txType, whitelist } = args;
@@ -522,11 +348,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
     const {
       tx: txNew,
-      isWhitelisted,
+      isAdvanced,
       verificationKeyHashes,
       symbol,
     } = await buildTokenTransaction({
       txType,
+      sender,
       chain: this.cloud.chain,
       fee,
       nonce,
@@ -551,7 +378,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
         "offer",
         "buy",
         "withdrawOffer",
-        "whitelistOffer",
+        "updateOfferWhitelist",
       ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
     ).includes(txType);
     const compileBid = (
@@ -559,77 +386,15 @@ export class TokenLauncherWorker extends zkCloudWorker {
         "bid",
         "sell",
         "withdrawBid",
-        "whitelistBid",
+        "updateBidWhitelist",
       ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
     ).includes(txType);
-    const compileAdmin = txType === "mint" || txType === "whitelistAdmin";
+    const compileAdmin = txType === "mint" || txType === "updateAdminWhitelist";
     await this.compile({
       compileAdmin,
-      isWhitelisted: isWhitelisted && compileAdmin,
+      isAdvanced: isAdvanced && compileAdmin,
       verificationKeyHashes,
     });
-    // if (compileOffer) {
-    //   if (
-    //     TokenLauncherWorker.offerVerificationKey?.hash.toJSON() !==
-    //       offerVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.offerVerificationKey?.data !==
-    //       offerVerificationKey.data
-    //   )
-    //     throw new Error(
-    //       "FungibleTokenOfferContract verification keys do not match"
-    //     );
-    // }
-    // if (compileBid) {
-    //   if (
-    //     TokenLauncherWorker.bidVerificationKey?.hash.toJSON() !==
-    //       bidVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.bidVerificationKey?.data !== bidVerificationKey.data
-    //   )
-    //     throw new Error(
-    //       "FungibleTokenBidContract verification keys do not match"
-    //     );
-    // }
-    // if (compileAdmin) {
-    //   if (isWhitelisted) {
-    //     if (
-    //       TokenLauncherWorker.whitelistedAdminVerificationKey?.hash.toJSON() !==
-    //         adminVerificationKey.hash.toJSON() ||
-    //       TokenLauncherWorker.whitelistedAdminVerificationKey?.data !==
-    //         adminVerificationKey.data
-    //     )
-    //       throw new Error(
-    //         "FungibleTokenWhitelistedAdmin verification keys do not match"
-    //       );
-    //   } else {
-    //     if (
-    //       TokenLauncherWorker.contractAdminVerificationKey?.hash.toJSON() !==
-    //         adminVerificationKey.hash.toJSON() ||
-    //       TokenLauncherWorker.contractAdminVerificationKey?.data !==
-    //         adminVerificationKey.data
-    //     )
-    //       throw new Error("FungibleTokenAdmin verification keys do not match");
-    //   }
-    // }
-
-    // if (!isWhitelisted || txType !== "mint") {
-    //   if (
-    //     TokenLauncherWorker.contractVerificationKey?.hash.toJSON() !==
-    //       tokenVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.contractVerificationKey?.data !==
-    //       tokenVerificationKey.data
-    //   )
-    //     throw new Error("FungibleToken verification keys do not match");
-    // } else {
-    //   if (
-    //     TokenLauncherWorker.whitelistedFungibleTokenVerificationKey?.hash.toJSON() !==
-    //       tokenVerificationKey.hash.toJSON() ||
-    //     TokenLauncherWorker.whitelistedFungibleTokenVerificationKey?.data !==
-    //       tokenVerificationKey.data
-    //   )
-    //     throw new Error(
-    //       "WhitelistedFungibleToken verification keys do not match"
-    //     );
-    // }
 
     console.time("proved tx");
     console.log(`Proving ${txType} transaction...`);
