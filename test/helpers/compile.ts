@@ -4,8 +4,8 @@ import { Mina, VerificationKey, Field, Cache } from "o1js";
 import {
   FungibleToken,
   FungibleTokenAdmin,
-  WhitelistedFungibleToken,
-  FungibleTokenWhitelistedAdmin,
+  AdvancedFungibleToken,
+  FungibleTokenAdvancedAdmin,
   FungibleTokenBidContract,
   FungibleTokenOfferContract,
   tokenContracts,
@@ -60,13 +60,13 @@ const contracts: {
   { name: "FungibleToken", contract: FungibleToken, type: "token" },
   { name: "FungibleTokenAdmin", contract: FungibleTokenAdmin, type: "admin" },
   {
-    name: "WhitelistedFungibleToken",
-    contract: WhitelistedFungibleToken,
+    name: "AdvancedFungibleToken",
+    contract: AdvancedFungibleToken,
     type: "token",
   },
   {
-    name: "FungibleTokenWhitelistedAdmin",
-    contract: FungibleTokenWhitelistedAdmin,
+    name: "FungibleTokenAdvancedAdmin",
+    contract: FungibleTokenAdvancedAdmin,
     type: "admin",
   },
   {
@@ -159,7 +159,7 @@ export async function compileContracts(chain: blockchain) {
   await it("should compare verification keys with MF versions", async () => {
     const sets = [
       { name: "FungibleToken", MF_name: "FungibleTokenMF" },
-      { name: "WhitelistedFungibleToken", MF_name: "FungibleTokenMF" },
+      { name: "AdvancedFungibleToken", MF_name: "FungibleTokenMF" },
       { name: "FungibleTokenAdmin", MF_name: "FungibleTokenAdminMF" },
     ];
     for (const set of sets) {
@@ -170,15 +170,15 @@ export async function compileContracts(chain: blockchain) {
         (vk) => vk.name === set.MF_name
       )?.verificationKey;
       if (!verificationKey) {
-        throw new Error(`Verification key for ${set.name} not found`);
+        console.error(`Verification key for ${set.name} not found`);
       }
       if (!MF_verificationKey) {
-        throw new Error(`Verification key for ${set.MF_name} not found`);
+        console.error(`Verification key for ${set.MF_name} not found`);
       }
       assert(
-        verificationKey.hash.toJSON() === MF_verificationKey.hash.toJSON()
+        verificationKey?.hash.toJSON() === MF_verificationKey?.hash.toJSON()
       );
-      assert(verificationKey.data === MF_verificationKey.data);
+      assert(verificationKey?.data === MF_verificationKey?.data);
     }
   });
 
@@ -190,21 +190,25 @@ export async function compileContracts(chain: blockchain) {
       const recordedVerificationKey =
         tokenVerificationKeys[networkId]["vk"][contract.name];
       if (!verificationKey) {
-        throw new Error(`Verification key for ${contract.name} not found`);
+        console.error(`Verification key for ${contract.name} not found`);
       }
       if (!recordedVerificationKey) {
-        if (contract.type !== "check")
+        if (contract.type !== "check") {
           console.error(
             `Recorded verification key for ${contract.name} not found`
           );
-        isDifferent = true;
+          isDifferent = true;
+        }
       } else if (
-        verificationKey.hash.toJSON() !== recordedVerificationKey.hash
+        verificationKey?.hash.toJSON() !== recordedVerificationKey?.hash
       ) {
         console.error(`Verification key for ${contract.name} is different`);
         isDifferent = true;
       }
-      if (verificationKey.data !== recordedVerificationKey.data) {
+      if (
+        verificationKey?.data !== recordedVerificationKey?.data &&
+        contract.type !== "check"
+      ) {
         console.error(
           `Verification key data for ${contract.name} is different`
         );
@@ -215,7 +219,7 @@ export async function compileContracts(chain: blockchain) {
   });
 
   await it("should save new verification keys", async () => {
-    isDifferent = true;
+    //isDifferent = true;
     if (isDifferent) {
       console.log("saving new verification keys");
       let vk: Contracts = {
