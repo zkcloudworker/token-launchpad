@@ -72,6 +72,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     // compileOffer?: boolean;
     // compileBid?: boolean;
   }): Promise<void> {
+    console.log("Compile", params);
     const {
       compileAdmin = false,
       isAdvanced = false,
@@ -88,32 +89,43 @@ export class TokenLauncherWorker extends zkCloudWorker {
           Object.entries(vk).find(([_, item]) => item.hash === hash) || [];
         if (!key) throw new Error(`Key not found for hash ${hash}`);
         if (!item) throw new Error(`Verification key for ${hash} not found`);
+        console.log("Compiling", item.type, key);
         switch (item.type) {
           case "token":
             if (isAdvanced) {
-              const verificationKey = (
-                await AdvancedFungibleToken.compile({
-                  cache: this.cache,
-                })
-              ).verificationKey;
-              if (verificationKey.hash.toJSON() !== hash)
+              if (!TokenLauncherWorker.verificationKeys.AdvancedFungibleToken) {
+                console.time("compiled advanced fungible token");
+                TokenLauncherWorker.verificationKeys.AdvancedFungibleToken = (
+                  await AdvancedFungibleToken.compile({
+                    cache: this.cache,
+                  })
+                ).verificationKey;
+                console.timeEnd("compiled advanced fungible token");
+              }
+              if (
+                TokenLauncherWorker.verificationKeys.AdvancedFungibleToken.hash.toJSON() !==
+                hash
+              )
                 throw new Error(
                   `Verification key for ${key} (${hash}) does not match`
                 );
-              TokenLauncherWorker.verificationKeys.WhitelistedFungibleToken =
-                verificationKey;
             } else {
-              const verificationKey = (
-                await FungibleToken.compile({
-                  cache: this.cache,
-                })
-              ).verificationKey;
-              if (verificationKey.hash.toJSON() !== hash)
+              if (!TokenLauncherWorker.verificationKeys.FungibleToken) {
+                console.time("compiled fungible token");
+                TokenLauncherWorker.verificationKeys.FungibleToken = (
+                  await FungibleToken.compile({
+                    cache: this.cache,
+                  })
+                ).verificationKey;
+                console.timeEnd("compiled fungible token");
+              }
+              if (
+                TokenLauncherWorker.verificationKeys.FungibleToken.hash.toJSON() !==
+                hash
+              )
                 throw new Error(
                   `Verification key for ${key} (${hash}) does not match`
                 );
-              TokenLauncherWorker.verificationKeys.FungibleToken =
-                verificationKey;
             }
             break;
 
@@ -121,16 +133,21 @@ export class TokenLauncherWorker extends zkCloudWorker {
           case "user":
             const contract = tokenContracts[key];
             if (!contract) throw new Error(`Contract ${key} not found`);
-            const verificationKey = (
-              await contract.compile({
-                cache: this.cache,
-              })
-            ).verificationKey;
-            if (verificationKey.hash.toJSON() !== hash)
+            if (!TokenLauncherWorker.verificationKeys[key]) {
+              console.time(`compiled ${key}`);
+              TokenLauncherWorker.verificationKeys[key] = (
+                await contract.compile({
+                  cache: this.cache,
+                })
+              ).verificationKey;
+              console.timeEnd(`compiled ${key}`);
+            }
+            if (
+              TokenLauncherWorker.verificationKeys[key].hash.toJSON() !== hash
+            )
               throw new Error(
                 `Verification key for ${key} (${hash}) does not match`
               );
-            TokenLauncherWorker.verificationKeys[key] = verificationKey;
             break;
 
           case "upgrade":
@@ -160,12 +177,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   public async execute(transactions: string[]): Promise<string | undefined> {
     if (transactions.length === 0) throw new Error("transactions is empty");
+    if (this.cloud.task !== "prove") throw new Error("Invalid task");
     const proofs: string[] = [];
     for (const transaction of transactions) {
-      const tx =
-        this.cloud.task === "launch"
-          ? (JSON.parse(transaction) as DeployTransaction)
-          : (JSON.parse(transaction) as TokenTransaction);
+      const tx = JSON.parse(transaction) as
+        | TokenTransaction
+        | DeployTransaction;
       switch (tx.txType) {
         case "launch":
           proofs.push(await this.launch(tx));
@@ -197,7 +214,20 @@ export class TokenLauncherWorker extends zkCloudWorker {
   }
 
   private stringifyJobResult(result: JobResult): string {
-    return JSON.stringify(result, null, 2);
+    /*
+        export interface JobResult {
+          success: boolean;
+          error?: string;
+          tx?: string;
+          hash?: string;
+          jobStatus?: string;
+        }
+    */
+    const strippedResult = {
+      ...result,
+      tx: result.hash ? undefined : result.tx,
+    };
+    return JSON.stringify(strippedResult, null, 2);
   }
 
   private async launch(args: DeployTransaction): Promise<string> {
@@ -306,6 +336,14 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   private async transaction(args: TokenTransaction): Promise<string> {
     const { txType, whitelist } = args;
+    console.log("transaction:", {
+      ...args,
+      minaSignerPayload: undefined,
+      walletPayload: undefined,
+      proverPayload: undefined,
+      signedData: undefined,
+      transaction: undefined,
+    });
 
     if (
       txType === undefined ||
@@ -445,6 +483,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const { tx, txJSON, memo, metadata } = params;
     let txSent;
     let sent = false;
+    const start = Date.now();
+    const timeout = 60 * 1000;
     while (!sent) {
       txSent = await tx.safeSend();
       if (txSent.status == "pending") {
@@ -452,8 +492,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
         console.log(
           `${memo} tx sent: hash: ${txSent.hash} status: ${txSent.status}`
         );
-      } else if (this.cloud.chain === "zeko") {
-        console.log("Retrying Zeko tx");
+      } else if (this.cloud.chain === "zeko" && Date.now() - start < timeout) {
+        console.log("Retrying Zeko tx", txSent.status, txSent.errors);
         await sleep(10000);
       } else {
         console.log(

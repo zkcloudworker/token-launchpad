@@ -135,6 +135,8 @@ describe("Token Launchpad Worker", async () => {
       { name: "offer", publicKey: offer },
       { name: "bid", publicKey: bid },
       { name: "wallet", publicKey: wallet },
+      { name: "adminContract", publicKey: adminKey },
+      { name: "tokenContract", publicKey: tokenKey },
     ];
     await fetchMinaAccount({ publicKey: wallet, force: false });
     if (!Mina.hasAccount(wallet)) {
@@ -275,6 +277,7 @@ describe("Token Launchpad Worker", async () => {
           symbol,
           whitelist: advancedAdmin ? whitelist : undefined,
           anyoneCanMint: Bool(false),
+          totalSupply: UInt64.from(2000e9),
           requireAdminSignatureForMint: Bool(false),
           provingKey: wallet,
           provingFee: UInt64.from(LAUNCH_FEE),
@@ -285,25 +288,30 @@ describe("Token Launchpad Worker", async () => {
       tx.sign([admin.key, adminKey.key, tokenKey.key]);
       const payloads = createTransactionPayloads(tx);
       console.log("sending deploy transaction");
-      const jobId = await api.sendDeployTransaction({
-        txType: "launch",
-        adminType: advancedAdmin ? "advanced" : "standard",
-        ...payloads,
-        adminContractAddress: adminKey.toBase58(),
-        tokenAddress: tokenKey.toBase58(),
-        symbol,
-        uri: src,
-        whitelist: deployedWhitelist,
-      });
+      const jobId = await api.proveTransactions([
+        {
+          txType: "launch",
+          adminType: advancedAdmin ? "advanced" : "standard",
+          ...payloads,
+          adminContractAddress: adminKey.toBase58(),
+          tokenAddress: tokenKey.toBase58(),
+          symbol,
+          uri: src,
+          whitelist: deployedWhitelist,
+        },
+      ]);
       console.log("deploy jobId:", jobId);
       assert(jobId !== undefined, "Deploy jobId is undefined");
-      const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-      assert(result !== undefined, "Deploy result is undefined");
-      const proofsJSON = JSON.parse(result);
-      const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-      assert(resultJSON?.success, "Deploy result is not success");
-      const hash = resultJSON?.hash;
+      await api.waitForJobResults({ jobId, printLogs: true });
+      const proofs = await api.getResults(jobId);
+      console.log("proofs", proofs);
+      if (
+        !("results" in proofs) ||
+        !proofs.results ||
+        proofs.results.length === 0
+      )
+        throw new Error("Results not found");
+      const hash = proofs.results[0].hash;
       assert(hash !== undefined, "Deploy hash is undefined");
       console.log("deploy hash:", hash);
       console.time("deploy tx included");
@@ -356,24 +364,28 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.sendTransaction({
-          txType: "mint",
-          ...payloads,
-          tokenAddress: tokenKey.toBase58(),
-          from: admin.toBase58(),
-          symbol,
-          amount: Number(amount.toBigInt()),
-          to: to.toBase58(),
-        });
+        const jobId = await api.proveTransactions([
+          {
+            txType: "mint",
+            ...payloads,
+            tokenAddress: tokenKey.toBase58(),
+            from: admin.toBase58(),
+            symbol,
+            amount: Number(amount.toBigInt()),
+            to: to.toBase58(),
+          },
+        ]);
         console.log("mint jobId:", jobId);
         assert(jobId !== undefined, "Mint jobId is undefined");
-        const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-        assert(result !== undefined, "Mint result is undefined");
-        const proofsJSON = JSON.parse(result);
-        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-        assert(resultJSON?.success, "Mint result is not success");
-        const hash = resultJSON?.hash;
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
         assert(hash !== undefined, "Mint hash is undefined");
         console.log("mint hash:", hash);
         hashArray.push(hash);
@@ -390,6 +402,13 @@ describe("Token Launchpad Worker", async () => {
       console.timeEnd("minted");
       if (chain !== "local") await sleep(DELAY);
       await printBalances();
+      await fetchMinaAccount({
+        publicKey: adminKey,
+        tokenId: TokenId.derive(adminKey),
+        force: false,
+      });
+      const tb = await tokenBalance(adminKey, TokenId.derive(adminKey));
+      console.log("admin token balance", (tb ?? 0) / 1_000_000_000);
     });
   }
 
@@ -464,26 +483,30 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.sendTransaction({
-          txType: "offer",
-          ...payloads,
-          tokenAddress: tokenKey.toBase58(),
-          symbol,
-          amount: Number(sellAmount.toBigInt()),
-          from: seller.toBase58(),
-          to: contract.toBase58(),
-          whitelist: deployedWhitelist,
-          price: Number(price.toBigInt()),
-        });
+        const jobId = await api.proveTransactions([
+          {
+            txType: "offer",
+            ...payloads,
+            tokenAddress: tokenKey.toBase58(),
+            symbol,
+            amount: Number(sellAmount.toBigInt()),
+            from: seller.toBase58(),
+            to: contract.toBase58(),
+            whitelist: deployedWhitelist,
+            price: Number(price.toBigInt()),
+          },
+        ]);
         console.log("offer jobId:", jobId);
         assert(jobId !== undefined, "Offer jobId is undefined");
-        const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-        assert(result !== undefined, "Offer result is undefined");
-        const proofsJSON = JSON.parse(result);
-        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-        assert(resultJSON?.success, "Offer result is not success");
-        const hash = resultJSON?.hash;
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
         assert(hash !== undefined, "Offer hash is undefined");
         console.log("offer hash:", hash);
         hashArray.push(hash);
@@ -541,25 +564,29 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.sendTransaction({
-          txType: "buy",
-          ...payloads,
-          tokenAddress: tokenKey.toBase58(),
-          symbol,
-          amount: Number(boughtAmount.toBigInt()),
-          from: contract.toBase58(),
-          to: buyer.toBase58(),
-          price: Number(price.toBigInt()),
-        });
+        const jobId = await api.proveTransactions([
+          {
+            txType: "buy",
+            ...payloads,
+            tokenAddress: tokenKey.toBase58(),
+            symbol,
+            amount: Number(boughtAmount.toBigInt()),
+            from: contract.toBase58(),
+            to: buyer.toBase58(),
+            price: Number(price.toBigInt()),
+          },
+        ]);
         console.log("buy jobId:", jobId);
         assert(jobId !== undefined, "Buy jobId is undefined");
-        const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-        assert(result !== undefined, "Buy result is undefined");
-        const proofsJSON = JSON.parse(result);
-        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-        assert(resultJSON?.success, "Buy result is not success");
-        const hash = resultJSON?.hash;
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
         assert(hash !== undefined, "Buy hash is undefined");
         console.log("buy hash:", hash);
         hashArray.push(hash);
@@ -617,24 +644,28 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.sendTransaction({
-          txType: "withdrawOffer",
-          ...payloads,
-          tokenAddress: tokenKey.toBase58(),
-          symbol,
-          amount: Number(withdrawAmount.toBigInt()),
-          from: contract.toBase58(),
-          to: seller.toBase58(),
-        });
+        const jobId = await api.proveTransactions([
+          {
+            txType: "withdrawOffer",
+            ...payloads,
+            tokenAddress: tokenKey.toBase58(),
+            symbol,
+            amount: Number(withdrawAmount.toBigInt()),
+            from: contract.toBase58(),
+            to: seller.toBase58(),
+          },
+        ]);
         console.log("withdraw jobId:", jobId);
         assert(jobId !== undefined, "Withdraw jobId is undefined");
-        const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-        assert(result !== undefined, "Withdraw result is undefined");
-        const proofsJSON = JSON.parse(result);
-        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-        assert(resultJSON?.success, "Withdraw result is not success");
-        const hash = resultJSON?.hash;
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
         assert(hash !== undefined, "Withdraw hash is undefined");
         console.log("withdraw hash:", hash);
         hashArray.push(hash);
@@ -691,24 +722,28 @@ describe("Token Launchpad Worker", async () => {
 
         tx.sign([from.key]);
         const payloads = createTransactionPayloads(tx);
-        const jobId = await api.sendTransaction({
-          txType: "transfer",
-          ...payloads,
-          tokenAddress: tokenKey.toBase58(),
-          symbol,
-          amount: Number(amount.toBigInt()),
-          from: from.toBase58(),
-          to: to.toBase58(),
-        });
+        const jobId = await api.proveTransactions([
+          {
+            txType: "transfer",
+            ...payloads,
+            tokenAddress: tokenKey.toBase58(),
+            symbol,
+            amount: Number(amount.toBigInt()),
+            from: from.toBase58(),
+            to: to.toBase58(),
+          },
+        ]);
         console.log("transfer jobId:", jobId);
         assert(jobId !== undefined, "Transfer jobId is undefined");
-        const result = await api.waitForJobResult({ jobId, printLogs: true });
-
-        assert(result !== undefined, "Transfer result is undefined");
-        const proofsJSON = JSON.parse(result);
-        const resultJSON = JSON.parse(proofsJSON.proofs[0]);
-        assert(resultJSON?.success, "Deploy result is not success");
-        const hash = resultJSON?.hash;
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
         assert(hash !== undefined, "Transfer hash is undefined");
         console.log("transfer hash:", hash);
         hashArray.push(hash);
