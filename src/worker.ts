@@ -10,9 +10,10 @@ import {
   TransactionMetadata,
 } from "zkcloudworker";
 import {
-  TransactionPayloads,
-  DeployTransaction,
   TokenTransaction,
+  LaunchTokenAdvancedAdminParams,
+  LaunchTokenStandardAdminParams,
+  LaunchTransaction,
   FungibleTokenTransactionType,
   JobResult,
 } from "@minatokens/api";
@@ -21,7 +22,7 @@ import {
   AdvancedFungibleToken,
   tokenContracts,
   tokenVerificationKeys,
-  buildTokenDeployTransaction,
+  buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
@@ -50,14 +51,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
   static verificationKeys: {
     [key: string]: VerificationKey;
   } = {};
-  // static contractVerificationKey: VerificationKey | undefined = undefined;
-  // static contractAdminVerificationKey: VerificationKey | undefined = undefined;
-  // static offerVerificationKey: VerificationKey | undefined = undefined;
-  // static bidVerificationKey: VerificationKey | undefined = undefined;
-  // static whitelistedAdminVerificationKey: VerificationKey | undefined =
-  //   undefined;
-  // static whitelistedFungibleTokenVerificationKey: VerificationKey | undefined =
-  //   undefined;
+
   readonly cache: Cache;
 
   constructor(cloud: Cloud) {
@@ -69,8 +63,6 @@ export class TokenLauncherWorker extends zkCloudWorker {
     compileAdmin?: boolean;
     isAdvanced?: boolean;
     verificationKeyHashes: string[];
-    // compileOffer?: boolean;
-    // compileBid?: boolean;
   }): Promise<void> {
     console.log("Compile", params);
     const {
@@ -180,9 +172,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     if (this.cloud.task !== "prove") throw new Error("Invalid task");
     const proofs: string[] = [];
     for (const transaction of transactions) {
-      const tx = JSON.parse(transaction) as
-        | TokenTransaction
-        | DeployTransaction;
+      const tx = JSON.parse(transaction) as TokenTransaction;
       switch (tx.txType) {
         case "launch":
           proofs.push(await this.launch(tx));
@@ -230,14 +220,14 @@ export class TokenLauncherWorker extends zkCloudWorker {
     return JSON.stringify(strippedResult, null, 2);
   }
 
-  private async launch(args: DeployTransaction): Promise<string> {
+  private async launch(args: LaunchTransaction): Promise<string> {
     if (
-      args.adminContractAddress === undefined ||
+      args.request.adminContractAddress === undefined ||
       args.sender === undefined ||
       args.transaction === undefined ||
       args.signedData === undefined ||
-      args.tokenAddress === undefined ||
-      args.uri === undefined ||
+      args.request.tokenAddress === undefined ||
+      args.request.uri === undefined ||
       args.symbol === undefined
     ) {
       throw new Error("One or more required args are undefined");
@@ -245,49 +235,58 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const sendTransaction = args.sendTransaction ?? true;
     if (WALLET === undefined) throw new Error("WALLET is undefined");
 
-    const contractAddress = PublicKey.fromBase58(args.tokenAddress);
-    const whitelist = args.whitelist;
-    console.log("Contract", contractAddress.toBase58());
-    const adminContractAddress = PublicKey.fromBase58(
-      args.adminContractAddress
-    );
-    console.log("Admin Contract", adminContractAddress.toBase58());
-    const developerAddress = args.developerAddress
-      ? PublicKey.fromBase58(args.developerAddress)
-      : undefined;
-    const developerFee = args.developerFee
-      ? UInt64.from(args.developerFee)
-      : undefined;
+    // const contractAddress = PublicKey.fromBase58(args.tokenAddress);
+    // console.log("Contract", contractAddress.toBase58());
+    // const adminContractAddress = PublicKey.fromBase58(
+    //   args.adminContractAddress
+    // );
+    // console.log("Admin Contract", adminContractAddress.toBase58());
+    // const developerAddress = args.developerAddress
+    //   ? PublicKey.fromBase58(args.developerAddress)
+    //   : undefined;
+    // const developerFee = args.developerFee
+    //   ? UInt64.from(args.developerFee)
+    //   : undefined;
 
     console.time("prepared tx");
-    const signedJson = JSON.parse(args.signedData);
+    // const signedJson = JSON.parse(args.signedData);
 
     const { fee, sender, nonce, memo } = transactionParams(args);
     console.log("Admin (sender)", sender.toBase58());
     if (sender.toBase58() != args.sender) throw new Error("Invalid sender");
 
+    // const {
+    //   tx: txNew,
+    //   isAdvanced,
+    //   verificationKeyHashes,
+    // } = await buildTokenDeployTransaction({
+    //   adminType: args.adminType,
+    //   chain: this.cloud.chain,
+    //   fee,
+    //   sender,
+    //   nonce,
+    //   memo,
+    //   tokenAddress: contractAddress,
+    //   adminContractAddress,
+    //   adminAddress: sender,
+    //   uri: args.uri,
+    //   symbol: args.symbol,
+    //   whitelist: args.whitelist,
+    //   decimals: UInt8.from(9),
+    //   provingKey: PublicKey.fromBase58(WALLET),
+    //   provingFee: UInt64.from(LAUNCH_FEE),
+    //   developerAddress,
+    //   developerFee,
+    // });
     const {
       tx: txNew,
       isAdvanced,
       verificationKeyHashes,
-    } = await buildTokenDeployTransaction({
-      adminType: args.adminType,
+    } = await buildTokenLaunchTransaction({
       chain: this.cloud.chain,
-      fee,
-      sender,
-      nonce,
-      memo,
-      tokenAddress: contractAddress,
-      adminContractAddress,
-      adminAddress: sender,
-      uri: args.uri,
-      symbol: args.symbol,
-      whitelist: args.whitelist,
-      decimals: UInt8.from(9),
-      provingKey: PublicKey.fromBase58(WALLET),
-      provingFee: UInt64.from(LAUNCH_FEE),
-      developerAddress,
-      developerFee,
+      args: args.request,
+      provingKey: WALLET,
+      provingFee: LAUNCH_FEE,
     });
     const tx = parseTransactionPayloads({ payloads: args, txNew });
 
@@ -317,11 +316,11 @@ export class TokenLauncherWorker extends zkCloudWorker {
         memo,
         metadata: {
           admin: sender.toBase58(),
-          contractAddress: contractAddress.toBase58(),
-          adminContractAddress: adminContractAddress.toBase58(),
+          tokenAddress: args.request.tokenAddress,
+          adminContractAddress: args.request.adminContractAddress,
           symbol: args.symbol,
-          uri: args.uri,
-          txType: "deploy",
+          uri: args.request.uri,
+          txType: "launch",
         } as any,
       });
     } catch (error) {
@@ -334,8 +333,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
     }
   }
 
-  private async transaction(args: TokenTransaction): Promise<string> {
-    const { txType, whitelist } = args;
+  private async transaction(
+    args: Exclude<TokenTransaction, LaunchTransaction>
+  ): Promise<string> {
+    const { txType } = args;
     console.log("transaction:", {
       ...args,
       minaSignerPayload: undefined,
@@ -345,89 +346,94 @@ export class TokenLauncherWorker extends zkCloudWorker {
       transaction: undefined,
     });
 
-    if (
-      txType === undefined ||
-      args.tokenAddress === undefined ||
-      args.from === undefined ||
-      args.to === undefined ||
-      args.amount === undefined
-    ) {
+    if (txType === undefined || args.tokenAddress === undefined) {
       throw new Error("One or more required args are undefined");
     }
     const sendTransaction = args.sendTransaction ?? true;
     if (WALLET === undefined) throw new Error("WALLET is undefined");
-    if (txType === "offer" || txType === "bid") {
-      if (args.price === undefined) throw new Error("Price is required");
-    }
-    if (
-      txType === "sell" ||
-      txType === "buy" ||
-      txType === "offer" ||
-      txType === "bid"
-    ) {
-      if (args.amount === undefined) throw new Error("Amount is required");
-    }
+    // if (txType === "offer" || txType === "bid") {
+    //   if (args.price === undefined) throw new Error("Price is required");
+    // }
+    // if (
+    //   txType === "sell" ||
+    //   txType === "buy" ||
+    //   txType === "offer" ||
+    //   txType === "bid"
+    // ) {
+    //   if (args.amount === undefined) throw new Error("Amount is required");
+    // }
 
-    const tokenAddress = PublicKey.fromBase58(args.tokenAddress);
-    console.log(txType, "tx for", tokenAddress.toBase58());
-    const from = PublicKey.fromBase58(args.from);
-    const to = PublicKey.fromBase58(args.to);
-    const amount = args.amount ? UInt64.from(args.amount) : undefined;
-    const developerAddress = args.developerAddress
-      ? PublicKey.fromBase58(args.developerAddress)
-      : undefined;
-    const developerFee = args.developerFee
-      ? UInt64.from(args.developerFee)
-      : undefined;
-    const price = args.price ? UInt64.from(args.price) : undefined;
+    // const tokenAddress = PublicKey.fromBase58(args.tokenAddress);
+    // console.log(txType, "tx for", tokenAddress.toBase58());
+    // const from = PublicKey.fromBase58(args.from);
+    // const to = PublicKey.fromBase58(args.to);
+    // const amount = args.amount ? UInt64.from(args.amount) : undefined;
+    // const developerAddress = args.developerAddress
+    //   ? PublicKey.fromBase58(args.developerAddress)
+    //   : undefined;
+    // const developerFee = args.developerFee
+    //   ? UInt64.from(args.developerFee)
+    //   : undefined;
+    // const price = args.price ? UInt64.from(args.price) : undefined;
 
     console.time("prepared tx");
 
     const { fee, sender, nonce, memo } = transactionParams(args);
 
+    // const {
+    //   tx: txNew,
+    //   isAdvanced,
+    //   verificationKeyHashes,
+    //   symbol,
+    // } = await buildTokenTransaction({
+    //   txType,
+    //   sender,
+    //   chain: this.cloud.chain,
+    //   fee,
+    //   nonce,
+    //   memo,
+    //   tokenAddress,
+    //   whitelist,
+    //   provingKey: PublicKey.fromBase58(WALLET),
+    //   provingFee: UInt64.from(TRANSACTION_FEE),
+    //   from,
+    //   to,
+    //   amount,
+    //   price,
+    //   developerAddress,
+    //   developerFee,
+    // });
     const {
       tx: txNew,
       isAdvanced,
       verificationKeyHashes,
       symbol,
     } = await buildTokenTransaction({
-      txType,
-      sender,
       chain: this.cloud.chain,
-      fee,
-      nonce,
-      memo,
-      tokenAddress,
-      whitelist,
-      provingKey: PublicKey.fromBase58(WALLET),
-      provingFee: UInt64.from(TRANSACTION_FEE),
-      from,
-      to,
-      amount,
-      price,
-      developerAddress,
-      developerFee,
+      args: args.request,
+      provingKey: WALLET,
+      provingFee: TRANSACTION_FEE,
     });
 
     const tx = parseTransactionPayloads({ payloads: args, txNew });
     if (tx === undefined) throw new Error("tx is undefined");
 
-    const compileOffer = (
-      [
-        "offer",
-        "buy",
-        "withdrawOffer",
-        "updateOfferWhitelist",
-      ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
-    ).includes(txType);
-    const compileBid = (
-      [
-        "bid",
-        "sell",
-        "withdrawBid",
-        "updateBidWhitelist",
-      ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
-    ).includes(txType);
+    // const compileOffer = (
+    //   [
+    //     "offer",
+    //     "buy",
+    //     "withdrawOffer",
+    //     "updateOfferWhitelist",
+    //   ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
+    // ).includes(txType);
+    // const compileBid = (
+    //   [
+    //     "bid",
+    //     "sell",
+    //     "withdrawBid",
+    //     "updateBidWhitelist",
+    //   ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
+    // ).includes(txType);
     const compileAdmin = txType === "mint" || txType === "updateAdminWhitelist";
     await this.compile({
       compileAdmin,
@@ -456,11 +462,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
         metadata: {
           type: txType,
           sender: sender.toBase58(),
-          tokenAddress: tokenAddress.toBase58(),
-          from: from.toBase58(),
-          to: to.toBase58(),
-          amount: amount?.toBigInt().toString(),
-          price: args.price?.toString(),
+          tokenAddress: args.tokenAddress,
           symbol,
         } as any,
       });
