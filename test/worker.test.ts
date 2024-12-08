@@ -28,7 +28,7 @@ import {
   FungibleToken,
   FungibleTokenAdmin,
   FungibleTokenOfferContract,
-  buildTokenDeployTransaction,
+  buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
@@ -44,6 +44,17 @@ import {
   wallet,
 } from "./helpers/config.js";
 import { processArguments } from "./helpers/utils.js";
+import {
+  BuyTransactionParams,
+  LaunchTokenAdvancedAdminParams,
+  LaunchTransaction,
+  MintTransaction,
+  MintTransactionParams,
+  OfferTransactionParams,
+  TransferTransactionParams,
+  WithdrawOfferTransactionParams,
+} from "@minatokens/api";
+import { LaunchTokenStandardAdminParams } from "@minatokens/api";
 
 const { TestPublicKey } = Mina;
 type TestPublicKey = Mina.TestPublicKey;
@@ -262,44 +273,60 @@ describe("Token Launchpad Worker", async () => {
         { address: user2, amount: UInt64.from(1000e9) },
       ];
 
-      const { tx, whitelist: deployedWhitelist } =
-        await buildTokenDeployTransaction({
-          chain,
-          adminType: advancedAdmin ? "advanced" : "standard",
-          fee: await fee(),
-          sender: admin,
-          nonce: Number(Mina.getAccount(admin).nonce.toBigint()),
-          memo: `deploy token ${symbol}`.substring(0, 30),
-          adminContractAddress: adminKey,
-          adminAddress: admin,
-          tokenAddress: tokenKey,
-          uri: src,
-          symbol,
-          whitelist: advancedAdmin ? whitelist : undefined,
-          anyoneCanMint: Bool(false),
-          totalSupply: UInt64.from(2000e9),
-          requireAdminSignatureForMint: Bool(false),
-          provingKey: wallet,
-          provingFee: UInt64.from(LAUNCH_FEE),
-          decimals: UInt8.from(9),
-        });
-      console.log("deployedWhitelist", deployedWhitelist);
+      const adminType = advancedAdmin ? "advanced" : "standard";
+      await fetchMinaAccount({ publicKey: admin, force: true });
+      const args: // | LaunchTokenAdvancedAdminParams
+      LaunchTokenStandardAdminParams = {
+        txType: "launch",
+        adminContract: "standard",
+        sender: admin.toBase58(),
+        nonce: Number(Mina.getAccount(admin).nonce.toBigint()),
+        memo: `deploy token ${symbol}`.substring(0, 30),
+        uri: src,
+        symbol,
+        // whitelist: advancedAdmin
+        //   ? whitelist.map(({ address, amount }) => ({
+        //       address: address.toBase58(),
+        //       amount: Number(amount.toBigInt()),
+        //     }))
+        //   : undefined,
+        // canMint: "whitelist",
+        // totalSupply: 2000e9,
+        // requireAdminSignatureForMint: false,
+        decimals: 9,
+        tokenAddress: tokenKey.toBase58(),
+        adminContractAddress: adminKey.toBase58(),
+      };
+      console.log("args nonce:", args.nonce);
+      const { tx, request } = await buildTokenLaunchTransaction({
+        chain,
+        args,
+        provingKey: process.env.WALLET!,
+        provingFee: LAUNCH_FEE,
+      });
+      // if (args.adminContract === "advanced" && "whitelist" in request)
+      //   args.whitelist = request.whitelist;
 
       tx.sign([admin.key, adminKey.key, tokenKey.key]);
       const payloads = createTransactionPayloads(tx);
       console.log("sending deploy transaction");
-      const jobId = await api.proveTransactions([
-        {
-          txType: "launch",
-          adminType: advancedAdmin ? "advanced" : "standard",
-          ...payloads,
-          adminContractAddress: adminKey.toBase58(),
-          tokenAddress: tokenKey.toBase58(),
-          symbol,
-          uri: src,
-          whitelist: deployedWhitelist,
-        },
-      ]);
+      if (request.adminContract !== adminType)
+        throw new Error("Admin type mismatch");
+      const txPayload: LaunchTransaction = {
+        txType: "launch",
+        request,
+        ...payloads,
+        symbol,
+        sender: admin.toBase58(),
+        tokenAddress: tokenKey.toBase58(),
+      };
+      const jobId = await api.proveTransaction(txPayload);
+
+      // const jobId = await api.proveTransaction(
+      //   request.adminContract === "advanced"
+      //     ? (txPayload as LaunchTokenAdvancedAdminTransaction)
+      //     : (txPayload as LaunchTokenStandardAdminTransaction)
+      // );
       console.log("deploy jobId:", jobId);
       assert(jobId !== undefined, "Deploy jobId is undefined");
       await api.waitForJobResults({ jobId, printLogs: true });
@@ -345,36 +372,32 @@ describe("Token Launchpad Worker", async () => {
           ? `mint ${symbol}`.substring(0, 30)
           : `mint ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`;
       for (const to of toArray) {
-        const { tx } = await buildTokenTransaction({
-          txType: "mint",
-          sender: admin,
+        const { tx, request } = await buildTokenTransaction({
           chain,
-          fee: await fee(),
-          nonce: nonce++,
-          memo,
-          tokenAddress: tokenKey,
-          from: admin,
-          to,
-          amount,
-          provingKey: wallet,
-          provingFee: UInt64.from(TRANSACTION_FEE),
+          args: {
+            txType: "mint",
+            sender: admin.toBase58(),
+            nonce: nonce++,
+            memo,
+            tokenAddress: tokenKey.toBase58(),
+            to: to.toBase58(),
+            amount: Number(amount.toBigInt()),
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
         });
 
         tx.sign([admin.key]);
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.proveTransactions([
-          {
-            txType: "mint",
-            ...payloads,
-            tokenAddress: tokenKey.toBase58(),
-            from: admin.toBase58(),
-            symbol,
-            amount: Number(amount.toBigInt()),
-            to: to.toBase58(),
-          },
-        ]);
+        const jobId = await api.proveTransaction({
+          txType: "mint",
+          request: request as MintTransactionParams,
+          ...payloads,
+          tokenAddress: tokenKey.toBase58(),
+          symbol,
+        });
         console.log("mint jobId:", jobId);
         assert(jobId !== undefined, "Mint jobId is undefined");
         await api.waitForJobResults({ jobId, printLogs: true });
@@ -459,23 +482,28 @@ describe("Token Launchpad Worker", async () => {
         );
         console.log("Seller:", seller.toBase58());
         console.log("Contract:", contract.toBase58());
-        const { tx, whitelist: deployedWhitelist } =
-          await buildTokenTransaction({
+        console.log("nonce:", nonce);
+        const { tx, request } = await buildTokenTransaction({
+          chain,
+          args: {
             txType: "offer",
-            sender: seller,
-            chain,
-            fee: await fee(),
-            nonce,
+            sender: seller.toBase58(),
+            offerAddress: contract.toBase58(),
+            nonce: nonce,
             memo: offerMemo,
-            tokenAddress: tokenKey,
-            from: seller,
-            to: contract,
-            amount: sellAmount,
-            price: offerPrice,
-            whitelist: whitelistOffer ? whitelist : undefined,
-            provingKey: wallet,
-            provingFee: UInt64.from(TRANSACTION_FEE),
-          });
+            tokenAddress: tokenKey.toBase58(),
+            amount: Number(sellAmount.toBigInt()),
+            price: Number(offerPrice.toBigInt()),
+            whitelist: whitelistOffer
+              ? whitelist.map(({ address, amount }) => ({
+                  address: address.toBase58(),
+                  amount: Number(amount.toBigInt()),
+                }))
+              : undefined,
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
+        });
 
         tx.sign([seller.key, contract.key]);
         const transaction = tx.toJSON();
@@ -483,19 +511,13 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.proveTransactions([
-          {
-            txType: "offer",
-            ...payloads,
-            tokenAddress: tokenKey.toBase58(),
-            symbol,
-            amount: Number(sellAmount.toBigInt()),
-            from: seller.toBase58(),
-            to: contract.toBase58(),
-            whitelist: deployedWhitelist,
-            price: Number(price.toBigInt()),
-          },
-        ]);
+        const jobId = await api.proveTransaction({
+          txType: "offer",
+          request: request as OfferTransactionParams,
+          ...payloads,
+          tokenAddress: tokenKey.toBase58(),
+          symbol,
+        });
         console.log("offer jobId:", jobId);
         assert(jobId !== undefined, "Offer jobId is undefined");
         await api.waitForJobResults({ jobId, printLogs: true });
@@ -542,20 +564,19 @@ describe("Token Launchpad Worker", async () => {
         const nonce = Number(Mina.getAccount(buyer).nonce.toBigint());
         console.log("Building buy transaction:", contract.toBase58());
         console.log("buyer:", buyer.toBase58());
-        const { tx } = await buildTokenTransaction({
-          txType: "buy",
-          sender: buyer,
+        const { tx, request } = await buildTokenTransaction({
           chain,
-          fee: await fee(),
-          nonce,
-          memo: boughtMemo,
-          tokenAddress: tokenKey,
-          from: contract,
-          to: buyer,
-          amount: boughtAmount,
-          price,
-          provingKey: wallet,
-          provingFee: UInt64.from(TRANSACTION_FEE),
+          args: {
+            txType: "buy",
+            sender: buyer.toBase58(),
+            nonce,
+            memo: boughtMemo,
+            tokenAddress: tokenKey.toBase58(),
+            offerAddress: contract.toBase58(),
+            amount: Number(boughtAmount.toBigInt()),
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
         });
 
         tx.sign([buyer.key]);
@@ -564,18 +585,13 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.proveTransactions([
-          {
-            txType: "buy",
-            ...payloads,
-            tokenAddress: tokenKey.toBase58(),
-            symbol,
-            amount: Number(boughtAmount.toBigInt()),
-            from: contract.toBase58(),
-            to: buyer.toBase58(),
-            price: Number(price.toBigInt()),
-          },
-        ]);
+        const jobId = await api.proveTransaction({
+          txType: "buy",
+          request: request as BuyTransactionParams,
+          ...payloads,
+          tokenAddress: tokenKey.toBase58(),
+          symbol,
+        });
         console.log("buy jobId:", jobId);
         assert(jobId !== undefined, "Buy jobId is undefined");
         await api.waitForJobResults({ jobId, printLogs: true });
@@ -623,19 +639,19 @@ describe("Token Launchpad Worker", async () => {
         const nonce = Number(Mina.getAccount(seller).nonce.toBigint());
         console.log("Building withdraw transaction:", contract.toBase58());
         console.log("seller:", seller.toBase58());
-        const { tx } = await buildTokenTransaction({
-          txType: "withdrawOffer",
-          sender: seller,
+        const { tx, request } = await buildTokenTransaction({
           chain,
-          fee: await fee(),
-          nonce,
-          memo: withdrawMemo,
-          tokenAddress: tokenKey,
-          from: contract,
-          to: seller,
-          amount: withdrawAmount,
-          provingKey: wallet,
-          provingFee: UInt64.from(TRANSACTION_FEE),
+          args: {
+            txType: "withdrawOffer",
+            sender: seller.toBase58(),
+            nonce,
+            memo: withdrawMemo,
+            tokenAddress: tokenKey.toBase58(),
+            offerAddress: contract.toBase58(),
+            amount: Number(withdrawAmount.toBigInt()),
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
         });
 
         tx.sign([seller.key]);
@@ -644,17 +660,13 @@ describe("Token Launchpad Worker", async () => {
 
         const payloads = createTransactionPayloads(tx);
 
-        const jobId = await api.proveTransactions([
-          {
-            txType: "withdrawOffer",
-            ...payloads,
-            tokenAddress: tokenKey.toBase58(),
-            symbol,
-            amount: Number(withdrawAmount.toBigInt()),
-            from: contract.toBase58(),
-            to: seller.toBase58(),
-          },
-        ]);
+        const jobId = await api.proveTransaction({
+          txType: "withdrawOffer",
+          request: request as WithdrawOfferTransactionParams,
+          ...payloads,
+          tokenAddress: tokenKey.toBase58(),
+          symbol,
+        });
         console.log("withdraw jobId:", jobId);
         assert(jobId !== undefined, "Withdraw jobId is undefined");
         await api.waitForJobResults({ jobId, printLogs: true });
@@ -705,19 +717,19 @@ describe("Token Launchpad Worker", async () => {
         await fetchMinaAccount({ publicKey: from, force: true });
         const nonce = Number(Mina.getAccount(from).nonce.toBigint());
         console.log("Building transfer transaction...");
-        const { tx } = await buildTokenTransaction({
-          txType: "transfer",
-          sender: from,
+        const { tx, request } = await buildTokenTransaction({
           chain,
-          fee: await fee(),
-          nonce,
-          memo,
-          tokenAddress: tokenKey,
-          from,
-          to,
-          amount,
-          provingKey: wallet,
-          provingFee: UInt64.from(TRANSACTION_FEE),
+          args: {
+            txType: "transfer",
+            sender: from.toBase58(),
+            nonce,
+            memo,
+            tokenAddress: tokenKey.toBase58(),
+            to: to.toBase58(),
+            amount: Number(amount.toBigInt()),
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
         });
 
         tx.sign([from.key]);
@@ -725,12 +737,10 @@ describe("Token Launchpad Worker", async () => {
         const jobId = await api.proveTransactions([
           {
             txType: "transfer",
+            request: request as TransferTransactionParams,
             ...payloads,
             tokenAddress: tokenKey.toBase58(),
             symbol,
-            amount: Number(amount.toBigInt()),
-            from: from.toBase58(),
-            to: to.toBase58(),
           },
         ]);
         console.log("transfer jobId:", jobId);
