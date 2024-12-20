@@ -45,14 +45,13 @@ import {
 } from "./helpers/config.js";
 import { processArguments } from "./helpers/utils.js";
 import {
-  BuyTransactionParams,
+  TokenBuyTransactionParams,
   LaunchTokenAdvancedAdminParams,
-  LaunchTransaction,
-  MintTransaction,
-  MintTransactionParams,
-  OfferTransactionParams,
-  TransferTransactionParams,
-  WithdrawOfferTransactionParams,
+  TokenTransaction,
+  TokenMintTransactionParams,
+  TokenOfferTransactionParams,
+  TokenTransferTransactionParams,
+  TokenWithdrawOfferTransactionParams,
 } from "@minatokens/api";
 import { LaunchTokenStandardAdminParams } from "@minatokens/api";
 
@@ -277,7 +276,7 @@ describe("Token Launchpad Worker", async () => {
       await fetchMinaAccount({ publicKey: admin, force: true });
       const args: // | LaunchTokenAdvancedAdminParams
       LaunchTokenStandardAdminParams = {
-        txType: "launch",
+        txType: "token:launch",
         adminContract: "standard",
         sender: admin.toBase58(),
         nonce: Number(Mina.getAccount(admin).nonce.toBigint()),
@@ -312,13 +311,14 @@ describe("Token Launchpad Worker", async () => {
       console.log("sending deploy transaction");
       if (request.adminContract !== adminType)
         throw new Error("Admin type mismatch");
-      const txPayload: LaunchTransaction = {
-        txType: "launch",
-        request,
+      const txPayload: TokenTransaction = {
+        request: {
+          ...request,
+          txType: "token:launch",
+        },
         ...payloads,
         symbol,
         sender: admin.toBase58(),
-        tokenAddress: tokenKey.toBase58(),
       };
       const jobId = await api.proveTransaction(txPayload);
 
@@ -375,7 +375,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, request } = await buildTokenTransaction({
           chain,
           args: {
-            txType: "mint",
+            txType: "token:mint",
             sender: admin.toBase58(),
             nonce: nonce++,
             memo,
@@ -392,10 +392,11 @@ describe("Token Launchpad Worker", async () => {
         const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.proveTransaction({
-          txType: "mint",
-          request: request as MintTransactionParams,
+          request: {
+            ...(request as TokenMintTransactionParams),
+            txType: "token:mint",
+          },
           ...payloads,
-          tokenAddress: tokenKey.toBase58(),
           symbol,
         });
         console.log("mint jobId:", jobId);
@@ -486,7 +487,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, request } = await buildTokenTransaction({
           chain,
           args: {
-            txType: "offer",
+            txType: "token:offer:create",
             sender: seller.toBase58(),
             offerAddress: contract.toBase58(),
             nonce: nonce,
@@ -512,10 +513,11 @@ describe("Token Launchpad Worker", async () => {
         const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.proveTransaction({
-          txType: "offer",
-          request: request as OfferTransactionParams,
+          request: {
+            ...(request as TokenOfferTransactionParams),
+            txType: "token:offer:create",
+          },
           ...payloads,
-          tokenAddress: tokenKey.toBase58(),
           symbol,
         });
         console.log("offer jobId:", jobId);
@@ -567,7 +569,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, request } = await buildTokenTransaction({
           chain,
           args: {
-            txType: "buy",
+            txType: "token:offer:buy",
             sender: buyer.toBase58(),
             nonce,
             memo: boughtMemo,
@@ -586,10 +588,11 @@ describe("Token Launchpad Worker", async () => {
         const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.proveTransaction({
-          txType: "buy",
-          request: request as BuyTransactionParams,
+          request: {
+            ...(request as TokenBuyTransactionParams),
+            txType: "token:offer:buy",
+          },
           ...payloads,
-          tokenAddress: tokenKey.toBase58(),
           symbol,
         });
         console.log("buy jobId:", jobId);
@@ -642,7 +645,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, request } = await buildTokenTransaction({
           chain,
           args: {
-            txType: "withdrawOffer",
+            txType: "token:offer:withdraw",
             sender: seller.toBase58(),
             nonce,
             memo: withdrawMemo,
@@ -661,10 +664,11 @@ describe("Token Launchpad Worker", async () => {
         const payloads = createTransactionPayloads(tx);
 
         const jobId = await api.proveTransaction({
-          txType: "withdrawOffer",
-          request: request as WithdrawOfferTransactionParams,
+          request: {
+            ...(request as TokenWithdrawOfferTransactionParams),
+            txType: "token:offer:withdraw",
+          },
           ...payloads,
-          tokenAddress: tokenKey.toBase58(),
           symbol,
         });
         console.log("withdraw jobId:", jobId);
@@ -720,7 +724,7 @@ describe("Token Launchpad Worker", async () => {
         const { tx, request } = await buildTokenTransaction({
           chain,
           args: {
-            txType: "transfer",
+            txType: "token:transfer",
             sender: from.toBase58(),
             nonce,
             memo,
@@ -736,10 +740,11 @@ describe("Token Launchpad Worker", async () => {
         const payloads = createTransactionPayloads(tx);
         const jobId = await api.proveTransactions([
           {
-            txType: "transfer",
-            request: request as TransferTransactionParams,
+            request: {
+              ...(request as TokenTransferTransactionParams),
+              txType: "token:transfer",
+            },
             ...payloads,
-            tokenAddress: tokenKey.toBase58(),
             symbol,
           },
         ]);

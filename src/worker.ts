@@ -11,10 +11,10 @@ import {
 } from "zkcloudworker";
 import {
   TokenTransaction,
-  LaunchTokenAdvancedAdminParams,
+  TokenTransactionParams,
   LaunchTokenStandardAdminParams,
-  LaunchTransaction,
-  FungibleTokenTransactionType,
+  LaunchTokenAdvancedAdminParams,
+  TokenTransactionType,
   JobResult,
 } from "@minatokens/api";
 import {
@@ -173,27 +173,28 @@ export class TokenLauncherWorker extends zkCloudWorker {
     const proofs: string[] = [];
     for (const transaction of transactions) {
       const tx = JSON.parse(transaction) as TokenTransaction;
-      switch (tx.txType) {
-        case "launch":
+      if (!tx.request) throw new Error("tx.request is undefined");
+      switch (tx.request?.txType) {
+        case "token:launch":
           proofs.push(await this.launch(tx));
           break;
 
-        case "transfer":
-        case "mint":
-        case "offer":
-        case "bid":
-        case "sell":
-        case "buy":
-        case "withdrawOffer":
-        case "withdrawBid":
-        case "updateBidWhitelist":
-        case "updateOfferWhitelist":
-        case "updateAdminWhitelist":
+        case "token:transfer":
+        case "token:mint":
+        case "token:offer:create":
+        case "token:bid:create":
+        case "token:offer:buy":
+        case "token:bid:sell":
+        case "token:bid:withdraw":
+        case "token:offer:withdraw":
+        case "token:bid:whitelist":
+        case "token:offer:whitelist":
+        case "token:admin:whitelist":
           proofs.push(await this.transaction(tx));
           break;
 
         default:
-          throw new Error(`Unknown txType: ${tx.txType}`);
+          throw new Error(`Unknown txType: ${tx.request?.txType}`);
       }
     }
     const result = JSON.stringify({ proofs }, null, 2);
@@ -220,15 +221,17 @@ export class TokenLauncherWorker extends zkCloudWorker {
     return JSON.stringify(strippedResult, null, 2);
   }
 
-  private async launch(args: LaunchTransaction): Promise<string> {
+  private async launch(args: TokenTransaction): Promise<string> {
     if (
+      !args.request ||
+      !("adminContractAddress" in args.request) ||
       args.request.adminContractAddress === undefined ||
       args.sender === undefined ||
       args.transaction === undefined ||
       args.signedData === undefined ||
       args.request.tokenAddress === undefined ||
       args.request.uri === undefined ||
-      args.symbol === undefined
+      args.request.symbol === undefined
     ) {
       throw new Error("One or more required args are undefined");
     }
@@ -333,76 +336,31 @@ export class TokenLauncherWorker extends zkCloudWorker {
     }
   }
 
-  private async transaction(
-    args: Exclude<TokenTransaction, LaunchTransaction>
-  ): Promise<string> {
-    const { txType } = args;
-    console.log("transaction:", {
-      ...args,
-      minaSignerPayload: undefined,
-      walletPayload: undefined,
-      proverPayload: undefined,
-      signedData: undefined,
-      transaction: undefined,
-    });
+  private async transaction(args: TokenTransaction): Promise<string> {
+    const { txType } = args.request;
+    const {
+      minaSignerPayload,
+      walletPayload,
+      proverPayload,
+      signedData,
+      transaction,
+      ...logArgs
+    } = args;
+    console.log("transaction:", logArgs);
 
-    if (txType === undefined || args.tokenAddress === undefined) {
+    if (txType === undefined || args.request.tokenAddress === undefined) {
       throw new Error("One or more required args are undefined");
     }
     const sendTransaction = args.sendTransaction ?? true;
     if (WALLET === undefined) throw new Error("WALLET is undefined");
-    // if (txType === "offer" || txType === "bid") {
-    //   if (args.price === undefined) throw new Error("Price is required");
-    // }
-    // if (
-    //   txType === "sell" ||
-    //   txType === "buy" ||
-    //   txType === "offer" ||
-    //   txType === "bid"
-    // ) {
-    //   if (args.amount === undefined) throw new Error("Amount is required");
-    // }
-
-    // const tokenAddress = PublicKey.fromBase58(args.tokenAddress);
-    // console.log(txType, "tx for", tokenAddress.toBase58());
-    // const from = PublicKey.fromBase58(args.from);
-    // const to = PublicKey.fromBase58(args.to);
-    // const amount = args.amount ? UInt64.from(args.amount) : undefined;
-    // const developerAddress = args.developerAddress
-    //   ? PublicKey.fromBase58(args.developerAddress)
-    //   : undefined;
-    // const developerFee = args.developerFee
-    //   ? UInt64.from(args.developerFee)
-    //   : undefined;
-    // const price = args.price ? UInt64.from(args.price) : undefined;
 
     console.time("prepared tx");
 
     const { fee, sender, nonce, memo } = transactionParams(args);
 
-    // const {
-    //   tx: txNew,
-    //   isAdvanced,
-    //   verificationKeyHashes,
-    //   symbol,
-    // } = await buildTokenTransaction({
-    //   txType,
-    //   sender,
-    //   chain: this.cloud.chain,
-    //   fee,
-    //   nonce,
-    //   memo,
-    //   tokenAddress,
-    //   whitelist,
-    //   provingKey: PublicKey.fromBase58(WALLET),
-    //   provingFee: UInt64.from(TRANSACTION_FEE),
-    //   from,
-    //   to,
-    //   amount,
-    //   price,
-    //   developerAddress,
-    //   developerFee,
-    // });
+    if (txType === "token:launch") {
+      throw new Error("Launch transaction is not supported");
+    }
     const {
       tx: txNew,
       isAdvanced,
@@ -410,7 +368,10 @@ export class TokenLauncherWorker extends zkCloudWorker {
       symbol,
     } = await buildTokenTransaction({
       chain: this.cloud.chain,
-      args: args.request,
+      args: args.request as Exclude<
+        TokenTransactionParams,
+        LaunchTokenStandardAdminParams | LaunchTokenAdvancedAdminParams
+      >,
       provingKey: WALLET,
       provingFee: TRANSACTION_FEE,
     });
@@ -434,7 +395,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
     //     "updateBidWhitelist",
     //   ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
     // ).includes(txType);
-    const compileAdmin = txType === "mint" || txType === "updateAdminWhitelist";
+    const compileAdmin =
+      txType === "token:mint" || txType === "token:admin:whitelist";
     await this.compile({
       compileAdmin,
       isAdvanced: isAdvanced && compileAdmin,
@@ -462,7 +424,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
         metadata: {
           type: txType,
           sender: sender.toBase58(),
-          tokenAddress: args.tokenAddress,
+          tokenAddress: args.request.tokenAddress,
           symbol,
         } as any,
       });
@@ -502,10 +464,20 @@ export class TokenLauncherWorker extends zkCloudWorker {
           `${memo} tx NOT sent: hash: ${txSent?.hash} status: ${txSent?.status}`,
           txSent.errors
         );
+        // TODO: handle right API handling on tx-result
+        this.cloud.publishTransactionMetadata({
+          txId: txSent?.hash,
+          metadata: {
+            ...metadata,
+            txStatus: txSent?.status,
+            txErrors: txSent?.errors,
+          } as any,
+        });
         return this.stringifyJobResult({
           success: false,
           tx: txJSON,
           hash: txSent.hash,
+          status: txSent.status,
           error: String(txSent.errors),
         });
       }
@@ -524,7 +496,11 @@ export class TokenLauncherWorker extends zkCloudWorker {
     if (txSent?.hash)
       this.cloud.publishTransactionMetadata({
         txId: txSent?.hash,
-        metadata,
+        metadata: {
+          ...metadata,
+          txStatus: txSent?.status,
+          txErrors: txSent?.errors,
+        } as any,
       });
     return this.stringifyJobResult({
       success:
@@ -533,6 +509,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
           : false,
       tx: txJSON,
       hash: txSent?.hash,
+      status: txSent?.status,
       error: String(txSent?.errors ?? ""),
     });
   }
