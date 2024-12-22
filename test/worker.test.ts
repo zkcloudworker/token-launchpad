@@ -28,13 +28,15 @@ import {
   FungibleToken,
   FungibleTokenAdmin,
   FungibleTokenOfferContract,
+  AdvancedFungibleToken,
+  FungibleTokenAdvancedAdmin,
+} from "@minatokens/token";
+import {
   buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-  AdvancedFungibleToken,
-  FungibleTokenAdvancedAdmin,
-} from "@minatokens/token";
+} from "@minatokens/abi";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
 import {

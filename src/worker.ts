@@ -17,16 +17,15 @@ import {
   TokenTransactionType,
   JobResult,
 } from "@minatokens/api";
+import { FungibleToken, AdvancedFungibleToken } from "@minatokens/token";
 import {
-  FungibleToken,
-  AdvancedFungibleToken,
   tokenContracts,
   tokenVerificationKeys,
   buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-} from "@minatokens/token";
+} from "@minatokens/abi";
 import {
   VerificationKey,
   PublicKey,
@@ -74,7 +73,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
       console.time("compiled");
       const vk =
         tokenVerificationKeys[
-          this.cloud.chain === "mainnet" ? "mainnet" : "testnet"
+          this.cloud.chain === "mainnet" ? "mainnet" : "devnet"
         ].vk;
       for (const hash of verificationKeyHashes) {
         const [key, item] =
