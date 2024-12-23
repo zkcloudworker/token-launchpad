@@ -45,26 +45,26 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/abi@npm:^0.12.1":
-  version: 0.12.1
-  resolution: "@minatokens/abi@npm:0.12.1"
+"@minatokens/abi@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "@minatokens/abi@npm:0.12.4"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.12.1
-    "@minatokens/storage": 0.12.1
-    "@minatokens/token": 0.12.1
+    "@minatokens/api": 0.12.4
+    "@minatokens/storage": 0.12.4
+    "@minatokens/token": 0.12.4
     o1js: ^2.2.0
-  checksum: 10c0/bf20c587782e93c0d1e7a955bc2c82fce857a9ba874f7fd1d9d94fd64ee4624be31b2ae3fa51ba08a91940f635b8074d3c20950e26d1a8edeae6f6274884583c
+  checksum: 10c0/f1b036a0b641cdc8c91b4bc39353dfcf0771cb507b637e4a2b9f1bb16f4d0304834fd8efd0ef22a6dfe8da466646ac6dce691a0d8162b14fdf765388e196fccf
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.12.1":
-  version: 0.12.1
-  resolution: "@minatokens/api@npm:0.12.1"
+"@minatokens/api@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "@minatokens/api@npm:0.12.4"
   dependencies:
     "@hey-api/client-fetch": "npm:^0.5.6"
-  checksum: 10c0/b75b98e7e2ec218e3b5ed3efe5cd7c04a32e667375e4ecfb1d3e63dbadd7b25cccb327e1e4b549a5d2cb4967d57ee9f28e2984f04f7e6147d39257278d5fe535
+  checksum: 10c0/6e96318ae04d4e7cedb2eca4e1d49d7c8e338b16e9433797b8a05328486daf9c9c849fd3b213b60de828046fb2d3a21ad888813ca8a82e81b6ca28f76eddf1ce
   languageName: node
   linkType: hard
 
@@ -77,27 +77,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/storage@npm:^0.12.1":
-  version: 0.12.1
-  resolution: "@minatokens/storage@npm:0.12.1"
+"@minatokens/storage@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "@minatokens/storage@npm:0.12.4"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
     o1js: ^2.2.0
-  checksum: 10c0/ff5b44199251a03f12d6b46a01b3d81c85a822c4fb9164b068dc48611f5ff5326d9990c06c0e4b4885cf0ff4364e9ee3b387f048d5ebae4bc632079f99ca087c
+  checksum: 10c0/a4250505ef40f4343bc1c8eb7d50642cb778bd75334f68aaac8be4416f90844587a861cbe71a07f787718905a6d02b97ac03b81a8d99dfb582401418ae21f2b7
   languageName: node
   linkType: hard
 
-"@minatokens/token@npm:^0.12.1":
-  version: 0.12.1
-  resolution: "@minatokens/token@npm:0.12.1"
+"@minatokens/token@npm:^0.12.4":
+  version: 0.12.4
+  resolution: "@minatokens/token@npm:0.12.4"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.12.1
-    "@minatokens/storage": 0.12.1
+    "@minatokens/api": 0.12.4
+    "@minatokens/storage": 0.12.4
     o1js: ^2.2.0
-  checksum: 10c0/f50d212a64275c47a5dafc64e35030f5d6c270e151e9ff1b2a6bf6d9996d9bea63877164081c61be6d1f1eb2ce25a1bc0f47184b039d330d95307a6ceabf56b4
+  checksum: 10c0/496564c8ca54e63f557515e79e2b4afb8f0378d505a7086ff1089e3fa26aa3e2dfdc3068763fef72aad8c4648691cd3babebfbc5326776c6a9f56bae32999d5f
   languageName: node
   linkType: hard
 
@@ -314,10 +314,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "token-launchpad@workspace:."
   dependencies:
-    "@minatokens/abi": "npm:^0.12.1"
-    "@minatokens/api": "npm:^0.12.1"
-    "@minatokens/storage": "npm:^0.12.1"
-    "@minatokens/token": "npm:^0.12.1"
+    "@minatokens/abi": "npm:^0.12.4"
+    "@minatokens/api": "npm:^0.12.4"
+    "@minatokens/storage": "npm:^0.12.4"
+    "@minatokens/token": "npm:^0.12.4"
     "@types/node": "npm:^22.10.2"
     dotenv: "npm:^16.4.7"
     o1js: "npm:2.2.0"
