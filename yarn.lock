@@ -45,26 +45,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/abi@npm:^0.12.4":
-  version: 0.12.4
-  resolution: "@minatokens/abi@npm:0.12.4"
+"@minatokens/abi@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "@minatokens/abi@npm:0.15.2"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.12.4
-    "@minatokens/storage": 0.12.4
-    "@minatokens/token": 0.12.4
+    "@minatokens/api": 0.15.2
+    "@minatokens/nft": 0.15.2
+    "@minatokens/storage": 0.15.2
+    "@minatokens/token": 0.15.2
     o1js: ^2.2.0
-  checksum: 10c0/f1b036a0b641cdc8c91b4bc39353dfcf0771cb507b637e4a2b9f1bb16f4d0304834fd8efd0ef22a6dfe8da466646ac6dce691a0d8162b14fdf765388e196fccf
+  checksum: 10c0/77fb826203d8d74acc86920ce152a1c3d232d97a810af768493d1f97fc58141aedc8abd852eb44dc2c0c6f222dda7d0bd64a1a29b6f293d7cff6cb9034a1aea9
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.12.4":
-  version: 0.12.4
-  resolution: "@minatokens/api@npm:0.12.4"
+"@minatokens/api@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "@minatokens/api@npm:0.15.2"
   dependencies:
     "@hey-api/client-fetch": "npm:^0.5.6"
-  checksum: 10c0/6e96318ae04d4e7cedb2eca4e1d49d7c8e338b16e9433797b8a05328486daf9c9c849fd3b213b60de828046fb2d3a21ad888813ca8a82e81b6ca28f76eddf1ce
+  checksum: 10c0/48764b79c85f19695d9db9adf825d3da72e31ef3964e37af3d93c40c4083a0cc1d3d332532c9f7ed288e6fb2000e0ff7dff177431d07ca0eeabd2bf516ce7b17
   languageName: node
   linkType: hard
 
@@ -77,27 +78,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/storage@npm:^0.12.4":
-  version: 0.12.4
-  resolution: "@minatokens/storage@npm:0.12.4"
+"@minatokens/storage@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "@minatokens/storage@npm:0.15.2"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
     o1js: ^2.2.0
-  checksum: 10c0/a4250505ef40f4343bc1c8eb7d50642cb778bd75334f68aaac8be4416f90844587a861cbe71a07f787718905a6d02b97ac03b81a8d99dfb582401418ae21f2b7
+  checksum: 10c0/956f53d91fb21a3307cee7d59c9ad250f8bd78f01198ca86dc76296708d87739a4e6ff86ef3368674c71f09e3855eec8f06045dc065fc6026e6358573bbfc9cd
   languageName: node
   linkType: hard
 
-"@minatokens/token@npm:^0.12.4":
-  version: 0.12.4
-  resolution: "@minatokens/token@npm:0.12.4"
+"@minatokens/token@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "@minatokens/token@npm:0.15.2"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.12.4
-    "@minatokens/storage": 0.12.4
+    "@minatokens/api": 0.15.2
+    "@minatokens/storage": 0.15.2
     o1js: ^2.2.0
-  checksum: 10c0/496564c8ca54e63f557515e79e2b4afb8f0378d505a7086ff1089e3fa26aa3e2dfdc3068763fef72aad8c4648691cd3babebfbc5326776c6a9f56bae32999d5f
+  checksum: 10c0/15a4bbdd8442c1e9dc8204b976d79166b936dbf536a393a6c926da34992fdd6a864cdc9553713bca412bff18eb68b099b716310e4b74cacdf0bf308ed680148f
   languageName: node
   linkType: hard
 
@@ -129,12 +130,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.10.2":
-  version: 22.10.2
-  resolution: "@types/node@npm:22.10.2"
+"@types/node@npm:^22.10.7":
+  version: 22.10.7
+  resolution: "@types/node@npm:22.10.7"
   dependencies:
     undici-types: "npm:~6.20.0"
-  checksum: 10c0/2c7b71a040f1ef5320938eca8ebc946e6905caa9bbf3d5665d9b3774a8d15ea9fab1582b849a6d28c7fc80756a62c5666bc66b69f42f4d5dafd1ccb193cdb4ac
+  checksum: 10c0/c941b4689dfc4044b64a5f601306cbcb0c7210be853ba378a5dd44137898c45accedd796ee002ad9407024cac7ecaf5049304951cb1d80ce3d7cebbbae56f20e
   languageName: node
   linkType: hard
 
@@ -314,16 +315,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "token-launchpad@workspace:."
   dependencies:
-    "@minatokens/abi": "npm:^0.12.4"
-    "@minatokens/api": "npm:^0.12.4"
-    "@minatokens/storage": "npm:^0.12.4"
-    "@minatokens/token": "npm:^0.12.4"
-    "@types/node": "npm:^22.10.2"
+    "@minatokens/abi": "npm:^0.15.2"
+    "@minatokens/api": "npm:^0.15.2"
+    "@minatokens/storage": "npm:^0.15.2"
+    "@minatokens/token": "npm:^0.15.2"
+    "@types/node": "npm:^22.10.7"
     dotenv: "npm:^16.4.7"
     o1js: "npm:2.2.0"
     ts-node: "npm:^10.9.2"
-    typescript: "npm:^5.7.2"
-    zkcloudworker: "npm:^0.23.3"
+    typescript: "npm:^5.7.3"
+    zkcloudworker: "npm:^0.23.12"
   languageName: unknown
   linkType: soft
 
@@ -379,23 +380,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.7.2":
-  version: 5.7.2
-  resolution: "typescript@npm:5.7.2"
+"typescript@npm:^5.7.3":
+  version: 5.7.3
+  resolution: "typescript@npm:5.7.3"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/a873118b5201b2ef332127ef5c63fb9d9c155e6fdbe211cbd9d8e65877283797cca76546bad742eea36ed7efbe3424a30376818f79c7318512064e8625d61622
+  checksum: 10c0/b7580d716cf1824736cc6e628ab4cd8b51877408ba2be0869d2866da35ef8366dd6ae9eb9d0851470a39be17cbd61df1126f9e211d8799d764ea7431d5435afa
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^5.7.2#optional!builtin<compat/typescript>":
-  version: 5.7.2
-  resolution: "typescript@patch:typescript@npm%3A5.7.2#optional!builtin<compat/typescript>::version=5.7.2&hash=5786d5"
+"typescript@patch:typescript@npm%3A^5.7.3#optional!builtin<compat/typescript>":
+  version: 5.7.3
+  resolution: "typescript@patch:typescript@npm%3A5.7.3#optional!builtin<compat/typescript>::version=5.7.3&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/f3b8082c9d1d1629a215245c9087df56cb784f9fb6f27b5d55577a20e68afe2a889c040aacff6d27e35be165ecf9dca66e694c42eb9a50b3b2c451b36b5675cb
+  checksum: 10c0/6fd7e0ed3bf23a81246878c613423730c40e8bdbfec4c6e4d7bf1b847cbb39076e56ad5f50aa9d7ebd89877999abaee216002d3f2818885e41c907caaa192cc4
   languageName: node
   linkType: hard
 
@@ -444,14 +445,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.23.3":
-  version: 0.23.3
-  resolution: "zkcloudworker@npm:0.23.3"
+"zkcloudworker@npm:^0.23.12":
+  version: 0.23.12
+  resolution: "zkcloudworker@npm:0.23.12"
   dependencies:
     "@minatokens/api": "npm:^0.9.7"
     chalk: "npm:^4.1.2"
   peerDependencies:
     o1js: ^2.1.0
-  checksum: 10c0/ca181a046ae362f6fdc918469dbd89e9367086752dad7519d73d452ec15081675dbd9f073c82f4db2fb323d0e90d4377cc49009bfc9b0cc42977f5dff7b1de5e
+  checksum: 10c0/2d51d216717cba2b93a6e3758f3f3941ae4bc477c9ee2fbb494dbaf06eb67bbe19a6d359f158e28e8acda480540a895d192b8693110d3160d51356e9b55235bd
   languageName: node
   linkType: hard
