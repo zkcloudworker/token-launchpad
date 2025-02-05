@@ -13,6 +13,7 @@ export function processArguments(): {
   withdrawBid: boolean;
   withdrawOffer: boolean;
   advancedAdmin: boolean;
+  bondingCurve: boolean;
   whitelistOffer: boolean;
   whitelistBid: boolean;
   updateAdminWhitelist: boolean;
@@ -50,5 +51,6 @@ export function processArguments(): {
     updateBidWhitelist: process.env.UPDATE_WHITELIST_BID === "true",
     updateAdminWhitelist: process.env.UPDATE_WHITELIST_ADMIN === "true",
     updateOfferWhitelist: process.env.UPDATE_WHITELIST_OFFER === "true",
+    bondingCurve: process.env.BONDING_CURVE === "true",
   };
 }

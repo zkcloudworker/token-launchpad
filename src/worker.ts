@@ -17,7 +17,11 @@ import {
   TokenTransactionType,
   JobResult,
 } from "@minatokens/api";
-import { FungibleToken, AdvancedFungibleToken } from "@minatokens/token";
+import {
+  FungibleToken,
+  AdvancedFungibleToken,
+  BondingCurveFungibleToken,
+} from "@minatokens/token";
 import {
   tokenContracts,
   tokenVerificationKeys,
@@ -25,6 +29,7 @@ import {
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
+  AdminType,
 } from "@minatokens/abi";
 import {
   VerificationKey,
@@ -60,13 +65,13 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
   private async compile(params: {
     compileAdmin?: boolean;
-    isAdvanced?: boolean;
+    adminType?: AdminType;
     verificationKeyHashes: string[];
   }): Promise<void> {
     console.log("Compile", params);
     const {
       compileAdmin = false,
-      isAdvanced = false,
+      adminType = "standard",
       verificationKeyHashes,
     } = params;
     try {
@@ -83,45 +88,66 @@ export class TokenLauncherWorker extends zkCloudWorker {
         console.log("Compiling", item.type, key);
         switch (item.type) {
           case "token":
-            if (isAdvanced) {
+            if (adminType === "advanced" && compileAdmin) {
               if (!TokenLauncherWorker.verificationKeys.AdvancedFungibleToken) {
-                console.time("compiled advanced fungible token");
+                console.time("compiled AdvancedFungibleToken");
                 TokenLauncherWorker.verificationKeys.AdvancedFungibleToken = (
                   await AdvancedFungibleToken.compile({
                     cache: this.cache,
                   })
                 ).verificationKey;
-                console.timeEnd("compiled advanced fungible token");
+                console.timeEnd("compiled AdvancedFungibleToken");
               }
               if (
-                TokenLauncherWorker.verificationKeys.AdvancedFungibleToken.hash.toJSON() !==
+                TokenLauncherWorker.verificationKeys.AdvancedFungibleToken?.hash.toJSON() !==
                 hash
               )
                 throw new Error(
-                  `Verification key for ${key} (${hash}) does not match`
+                  `Verification key for ${key} ${adminType} (${hash}) does not match`
+                );
+            } else if (adminType === "bondingCurve" && compileAdmin) {
+              if (
+                !TokenLauncherWorker.verificationKeys.BondingCurveFungibleToken
+              ) {
+                console.time("compiled BondingCurveFungibleToken");
+                TokenLauncherWorker.verificationKeys.BondingCurveFungibleToken =
+                  (
+                    await BondingCurveFungibleToken.compile({
+                      cache: this.cache,
+                    })
+                  ).verificationKey;
+                console.timeEnd("compiled BondingCurveFungibleToken");
+              }
+              if (
+                TokenLauncherWorker.verificationKeys.BondingCurveFungibleToken?.hash.toJSON() !==
+                hash
+              )
+                throw new Error(
+                  `Verification key for ${key} ${adminType} (${hash}) does not match`
                 );
             } else {
               if (!TokenLauncherWorker.verificationKeys.FungibleToken) {
-                console.time("compiled fungible token");
+                console.time("compiled FungibleToken");
                 TokenLauncherWorker.verificationKeys.FungibleToken = (
                   await FungibleToken.compile({
                     cache: this.cache,
                   })
                 ).verificationKey;
-                console.timeEnd("compiled fungible token");
+                console.timeEnd("compiled FungibleToken");
               }
               if (
-                TokenLauncherWorker.verificationKeys.FungibleToken.hash.toJSON() !==
+                TokenLauncherWorker.verificationKeys.FungibleToken?.hash.toJSON() !==
                 hash
               )
                 throw new Error(
-                  `Verification key for ${key} (${hash}) does not match`
+                  `Verification key for ${key} ${adminType} (${hash}) does not match`
                 );
             }
             break;
 
           case "admin":
           case "user":
+            if (item.type === "admin" && !compileAdmin) break;
             const contract = tokenContracts[key];
             if (!contract) throw new Error(`Contract ${key} not found`);
             if (!TokenLauncherWorker.verificationKeys[key]) {
@@ -180,6 +206,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
 
         case "token:transfer":
         case "token:mint":
+        case "token:burn":
+        case "token:redeem":
         case "token:offer:create":
         case "token:bid:create":
         case "token:offer:buy":
@@ -282,7 +310,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     // });
     const {
       tx: txNew,
-      isAdvanced,
+      adminType,
       verificationKeyHashes,
     } = await buildTokenLaunchTransaction({
       chain: this.cloud.chain,
@@ -295,7 +323,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
     if (tx === undefined) throw new Error("tx is undefined");
     await this.compile({
       compileAdmin: true,
-      isAdvanced,
+      adminType,
       verificationKeyHashes,
     });
 
@@ -319,6 +347,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
         metadata: {
           admin: sender.toBase58(),
           tokenAddress: args.request.tokenAddress,
+          adminType,
           adminContractAddress: args.request.adminContractAddress,
           symbol: args.symbol,
           uri: args.request.uri,
@@ -362,7 +391,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
     }
     const {
       tx: txNew,
-      isAdvanced,
+      adminType,
+      adminContractAddress,
       verificationKeyHashes,
       symbol,
     } = await buildTokenTransaction({
@@ -395,10 +425,12 @@ export class TokenLauncherWorker extends zkCloudWorker {
     //   ] satisfies FungibleTokenTransactionType[] as FungibleTokenTransactionType[]
     // ).includes(txType);
     const compileAdmin =
-      txType === "token:mint" || txType === "token:admin:whitelist";
+      txType === "token:mint" ||
+      txType === "token:redeem" ||
+      txType === "token:admin:whitelist";
     await this.compile({
       compileAdmin,
-      isAdvanced: isAdvanced && compileAdmin,
+      adminType,
       verificationKeyHashes,
     });
 
@@ -424,6 +456,8 @@ export class TokenLauncherWorker extends zkCloudWorker {
           type: txType,
           sender: sender.toBase58(),
           tokenAddress: args.request.tokenAddress,
+          adminType,
+          adminContractAddress: adminContractAddress.toBase58(),
           symbol,
         } as any,
       });
@@ -470,6 +504,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
             ...metadata,
             txStatus: txSent?.status,
             txErrors: txSent?.errors,
+            txHash: txSent?.hash,
           } as any,
         });
         return this.stringifyJobResult({
@@ -499,6 +534,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
           ...metadata,
           txStatus: txSent?.status,
           txErrors: txSent?.errors,
+          txHash: txSent?.hash,
         } as any,
       });
     return this.stringifyJobResult({

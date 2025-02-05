@@ -54,6 +54,8 @@ import {
   TokenOfferTransactionParams,
   TokenTransferTransactionParams,
   TokenWithdrawOfferTransactionParams,
+  LaunchTokenBondingCurveAdminParams,
+  TokenRedeemTransactionParams,
 } from "@minatokens/api";
 import { LaunchTokenStandardAdminParams } from "@minatokens/api";
 
@@ -82,6 +84,7 @@ const {
   updateAdminWhitelist,
   updateOfferWhitelist,
   updateBidWhitelist,
+  bondingCurve,
 } = args;
 
 const DELAY = chain === "local" ? 1000 : chain === "zeko" ? 3000 : 10000;
@@ -274,12 +277,18 @@ describe("Token Launchpad Worker", async () => {
         { address: user2, amount: UInt64.from(1000e9) },
       ];
 
-      const adminType = advancedAdmin ? "advanced" : "standard";
+      const adminType = bondingCurve
+        ? "bondingCurve"
+        : advancedAdmin
+        ? "advanced"
+        : "standard";
       await fetchMinaAccount({ publicKey: admin, force: true });
-      const args: // | LaunchTokenAdvancedAdminParams
-      LaunchTokenStandardAdminParams = {
+      const args:
+        | LaunchTokenAdvancedAdminParams
+        | LaunchTokenStandardAdminParams
+        | LaunchTokenBondingCurveAdminParams = {
         txType: "token:launch",
-        adminContract: "standard",
+        adminContract: bondingCurve ? "bondingCurve" : "standard",
         sender: admin.toBase58(),
         nonce: Number(Mina.getAccount(admin).nonce.toBigint()),
         memo: `deploy token ${symbol}`.substring(0, 30),
@@ -315,7 +324,7 @@ describe("Token Launchpad Worker", async () => {
         throw new Error("Admin type mismatch");
       const txPayload: TokenTransaction = {
         request: {
-          ...request,
+          ...(request as any),
           txType: "token:launch",
         },
         ...payloads,
@@ -365,9 +374,9 @@ describe("Token Launchpad Worker", async () => {
       console.time("minted");
       await fetchMinaAccount({ publicKey: admin, force: true });
       let nonce = Number(Mina.getAccount(admin).nonce.toBigint());
-      const toArray: TestPublicKey[] = [user1, user2];
+      const toArray: TestPublicKey[] = [user1, user1];
       const hashArray: string[] = [];
-      const amount = UInt64.from(1000e9);
+      const amount = UInt64.from(100000e9);
       const memo =
         `mint ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`.length >
         30
@@ -384,6 +393,7 @@ describe("Token Launchpad Worker", async () => {
             tokenAddress: tokenKey.toBase58(),
             to: to.toBase58(),
             amount: Number(amount.toBigInt()),
+            price: 20000,
           },
           provingKey: process.env.WALLET!,
           provingFee: TRANSACTION_FEE,
@@ -426,6 +436,84 @@ describe("Token Launchpad Worker", async () => {
       }
       Memory.info("minted");
       console.timeEnd("minted");
+      if (chain !== "local") await sleep(DELAY);
+      await printBalances();
+      await fetchMinaAccount({
+        publicKey: adminKey,
+        tokenId: TokenId.derive(adminKey),
+        force: false,
+      });
+      const tb = await tokenBalance(adminKey, TokenId.derive(adminKey));
+      console.log("admin token balance", (tb ?? 0) / 1_000_000_000);
+    });
+  }
+
+  if (bondingCurve) {
+    it(`should redeem tokens`, async () => {
+      console.time("redeemed");
+      await fetchMinaAccount({ publicKey: admin, force: true });
+      let nonce = Number(Mina.getAccount(user1).nonce.toBigint());
+      const toArray: TestPublicKey[] = [user1];
+      const hashArray: string[] = [];
+      const amount = UInt64.from(100000e9);
+      const memo =
+        `redeem ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`.length >
+        30
+          ? `redeem ${symbol}`.substring(0, 30)
+          : `redeem ${Number(amount.toBigInt()) / 1_000_000_000} ${symbol}`;
+      for (const to of toArray) {
+        const { tx, request } = await buildTokenTransaction({
+          chain,
+          args: {
+            txType: "token:redeem",
+            sender: user1.toBase58(),
+            nonce: nonce++,
+            memo,
+            tokenAddress: tokenKey.toBase58(),
+            amount: Number(amount.toBigInt()),
+            price: 10000,
+          },
+          provingKey: process.env.WALLET!,
+          provingFee: TRANSACTION_FEE,
+        });
+
+        tx.sign([user1.key]);
+
+        const payloads = createTransactionPayloads(tx);
+
+        const jobId = await api.proveTransaction({
+          request: {
+            ...(request as TokenRedeemTransactionParams),
+            txType: "token:redeem",
+          },
+          ...payloads,
+          symbol,
+        });
+        console.log("redeem jobId:", jobId);
+        assert(jobId !== undefined, "Redeem jobId is undefined");
+        await api.waitForJobResults({ jobId, printLogs: true });
+        const proofs = await api.getResults(jobId);
+        if (
+          !("results" in proofs) ||
+          !proofs.results ||
+          proofs.results.length === 0
+        )
+          throw new Error("Results not found");
+        const hash = proofs.results[0].hash;
+        assert(hash !== undefined, "Redeem hash is undefined");
+        console.log("redeem hash:", hash);
+        hashArray.push(hash);
+      }
+
+      for (const hash of hashArray) {
+        console.log("Waiting for redeem tx to be included...", hash);
+        while (!(await getTxStatusFast({ hash })).result === true) {
+          await sleep(10000);
+        }
+        console.log("redeem tx included", hash);
+      }
+      Memory.info("redeemed");
+      console.timeEnd("redeemed");
       if (chain !== "local") await sleep(DELAY);
       await printBalances();
       await fetchMinaAccount({

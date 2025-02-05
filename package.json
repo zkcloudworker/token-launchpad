@@ -1,6 +1,6 @@
 {
   "name": "token-launchpad",
-  "version": "0.12.6",
+  "version": "0.16.18",
   "author": "DFST",
   "type": "module",
   "license": "Apache-2.0",
@@ -10,6 +10,9 @@
     "test:watch": "node --test --watch test/**/*.test.{js,ts}",
     "compile": "yarn test ./test/compile-testnet.test.ts && yarn test ./test/compile-mainnet.test.ts",
     "local": "CHAIN=local CLOUD=local COMPILE=false DEBUG=false yarn test ./test/worker.test.ts",
+    "swap": "CHAIN=local CLOUD=local COMPILE=false DEBUG=false yarn test ./test/worker.test.ts",
+    "local:bc": "CHAIN=local CLOUD=local COMPILE=false BONDING_CURVE=true DEBUG=false yarn test ./test/worker.test.ts",
+    "devnet:bc": "CHAIN=devnet CLOUD=local COMPILE=false BONDING_CURVE=true DEBUG=false yarn test ./test/worker.test.ts",
     "local:advanced": "CHAIN=local CLOUD=local COMPILE=false ADVANCED_ADMIN=true WHITELIST_OFFER=true NODE_OPTIONS='--inspect --trace-uncaught' npm run test ./test/worker.test.ts",
     "lightnet": "CHAIN=lightnet CLOUD=local COMPILE=false npm run test ./test/worker.test.ts",
     "devnet:local": "CHAIN=devnet CLOUD=local COMPILE=false npm run test ./test/worker.test.ts",
@@ -22,18 +25,18 @@
     "version": ">=20.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.13.1",
     "dotenv": "^16.4.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "packageManager": "yarn@4.5.2",
   "dependencies": {
-    "@minatokens/abi": "^0.15.2",
-    "@minatokens/api": "^0.15.2",
-    "@minatokens/storage": "^0.15.2",
-    "@minatokens/token": "^0.15.2",
+    "@minatokens/abi": "^0.16.16",
+    "@minatokens/api": "^0.16.16",
+    "@minatokens/storage": "^0.16.16",
+    "@minatokens/token": "^0.16.16",
     "o1js": "2.2.0",
-    "zkcloudworker": "^0.23.12"
+    "zkcloudworker": "^0.24.3"
   }
 }
