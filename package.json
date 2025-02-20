@@ -1,6 +1,6 @@
 {
   "name": "token-launchpad",
-  "version": "0.16.18",
+  "version": "0.17.1",
   "author": "DFST",
   "type": "module",
   "license": "Apache-2.0",
@@ -25,18 +25,20 @@
     "version": ">=20.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.13.1",
+    "@types/node": "^22.13.4",
     "dotenv": "^16.4.7",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "packageManager": "yarn@4.5.2",
   "dependencies": {
-    "@minatokens/abi": "^0.16.16",
-    "@minatokens/api": "^0.16.16",
-    "@minatokens/storage": "^0.16.16",
-    "@minatokens/token": "^0.16.16",
+    "@silvana-one/abi": "^0.1.9",
+    "@silvana-one/api": "^0.1.9",
+    "@silvana-one/nft": "^0.1.9",
+    "@silvana-one/storage": "^0.1.9",
+    "@silvana-one/token": "^0.1.9",
+    "@silvana-one/upgradable": "^0.1.9",
     "o1js": "2.2.0",
-    "zkcloudworker": "^0.24.3"
+    "zkcloudworker": "^0.25.4"
   }
 }

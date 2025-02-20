@@ -14,10 +14,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hey-api/client-fetch@npm:^0.5.6":
-  version: 0.5.7
-  resolution: "@hey-api/client-fetch@npm:0.5.7"
-  checksum: 10c0/fc4408f0965ed9cc8cc9835caa9dea4247c6347b4a0bc16d8250522dbaf2853b93849ee3b802a1369ef8f715d22da3dcc2cd5d0e142da0bbae1a7da886b88327
+"@hey-api/client-fetch@npm:^0.8.1":
+  version: 0.8.1
+  resolution: "@hey-api/client-fetch@npm:0.8.1"
+  checksum: 10c0/19623187cdb85dbe0a38a817671ce4561489cb13377492fd9ee1c19f4650895f990a719b023109ca1d1595171b62db58da6ea2ebb10ddb4cc6b77d239f8f3b71
   languageName: node
   linkType: hard
 
@@ -45,60 +45,79 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@minatokens/abi@npm:^0.16.16":
-  version: 0.16.16
-  resolution: "@minatokens/abi@npm:0.16.16"
+"@silvana-one/abi@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/abi@npm:0.1.9"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.16.16
-    "@minatokens/nft": 0.16.16
-    "@minatokens/storage": 0.16.16
-    "@minatokens/token": 0.16.16
+    "@silvana-one/api": 0.1.9
+    "@silvana-one/nft": 0.1.9
+    "@silvana-one/storage": 0.1.9
+    "@silvana-one/token": 0.1.9
     o1js: ^2.2.0
-  checksum: 10c0/71cc4754f3811c0f213ad6ca79f28847121bd19b1f720160a994b17d3ef25ace1bb58c9f249a31ee9f12d7a87097f6ede7e538b685bd4f81065a896eac901ad5
+  checksum: 10c0/ce99ab1f262980e9e8534ca2c9b69b92dfa20862d955e087cdd7b345a3bc3752cbf3673b0705838576b0be41f954db24710fe08b98fe5cd22db07f815640c5f5
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.16.16":
-  version: 0.16.16
-  resolution: "@minatokens/api@npm:0.16.16"
+"@silvana-one/api@npm:^0.1.2, @silvana-one/api@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/api@npm:0.1.9"
   dependencies:
-    "@hey-api/client-fetch": "npm:^0.5.6"
-  checksum: 10c0/6b90cd0ba6e77c6b42d91897b9a8568555150d7159cd040509dcaf8b4b369f4b7f00d179bc8d9eb5e33aa749a3e68e39ec8086683584ef1034ea3130f501cabb
+    "@hey-api/client-fetch": "npm:^0.8.1"
+  checksum: 10c0/ec784cf4bf8f29622ba2f254f4becb2b6d076c46b45d8c3fd16bab7d5da34f1e83ddfe71e31287276ba6b63f3931d65f7f1eec74d7cd65b7bce665e51caf5670
   languageName: node
   linkType: hard
 
-"@minatokens/api@npm:^0.16.5":
-  version: 0.16.5
-  resolution: "@minatokens/api@npm:0.16.5"
+"@silvana-one/nft@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/nft@npm:0.1.9"
   dependencies:
-    "@hey-api/client-fetch": "npm:^0.5.6"
-  checksum: 10c0/d12ee8f2f962caa3ba8c39dfea32901df89c448806d1cc9b7e16755fc937add7fe39c0f946557aff704c8d1f56dfab76fe61b618e19e3ad705be0c687d915aa2
+    mina-signer: "npm:^3.0.7"
+    tslib: "npm:^2.8.1"
+  peerDependencies:
+    "@silvana-one/storage": 0.1.9
+    "@silvana-one/token": 0.1.9
+    "@silvana-one/upgradable": 0.1.9
+    o1js: ^2.2.0
+  checksum: 10c0/d13d1034c60a9872c4b7c60e14b8c8faf8d32decc4ef3ee97352a4784643037f4785b8c9e30f429077c2d0763264f994e3f04de5ed70edef7dd7c9d9f67790d0
   languageName: node
   linkType: hard
 
-"@minatokens/storage@npm:^0.16.16":
-  version: 0.16.16
-  resolution: "@minatokens/storage@npm:0.16.16"
+"@silvana-one/storage@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/storage@npm:0.1.9"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
     o1js: ^2.2.0
-  checksum: 10c0/0bfe1f1c548196c514741bae1f2df9a429b2be518151e2b874c6549957e3202dc406ab316596e2f68e39739ddc4d429036fbb11612a4727e055bda6b4cee5bd5
+  checksum: 10c0/5dd7ecfa81270a881eb23d403830606eb180b46b2227cdcc5cd888c6189ca687a08980c542bb46f2ad623e9747b4970adfc13f6b531f09115260bbf7532d6428
   languageName: node
   linkType: hard
 
-"@minatokens/token@npm:^0.16.16":
-  version: 0.16.16
-  resolution: "@minatokens/token@npm:0.16.16"
+"@silvana-one/token@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/token@npm:0.1.9"
   dependencies:
     tslib: "npm:^2.8.1"
   peerDependencies:
-    "@minatokens/api": 0.16.16
-    "@minatokens/storage": 0.16.16
+    "@silvana-one/api": 0.1.9
+    "@silvana-one/storage": 0.1.9
     o1js: ^2.2.0
-  checksum: 10c0/cb0d8b673fb6f67c51a40cc1868dcc616468cd618b1f4566cb4e34c88d5cae763d95d27541f4f3e4a236193edf3f22ff1f482d710d37e83670f8fae17abbe489
+  checksum: 10c0/1dc784ddd226e373e11718b41babcec0989cfa6466f8946839c72e989f38d58a82b9a8f7f7543d09bc690c394f83c0f63e719ed28decd17d481534e4da401adc
+  languageName: node
+  linkType: hard
+
+"@silvana-one/upgradable@npm:^0.1.9":
+  version: 0.1.9
+  resolution: "@silvana-one/upgradable@npm:0.1.9"
+  dependencies:
+    mina-signer: "npm:^3.0.7"
+    tslib: "npm:^2.8.1"
+  peerDependencies:
+    "@silvana-one/storage": 0.1.9
+    o1js: ^2.2.0
+  checksum: 10c0/574d92bf2483061db1c1eac6706b69c204012e1833fb25b1c1d9a218be4d307bb00d6f6f32b2fabfaa62fa675726acd50b210aa88a633700bd3a5b42ca1dd0b7
   languageName: node
   linkType: hard
 
@@ -130,12 +149,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:^22.13.1":
-  version: 22.13.1
-  resolution: "@types/node@npm:22.13.1"
+"@types/node@npm:^22.13.4":
+  version: 22.13.4
+  resolution: "@types/node@npm:22.13.4"
   dependencies:
     undici-types: "npm:~6.20.0"
-  checksum: 10c0/d4e56d41d8bd53de93da2651c0a0234e330bd7b1b6d071b1a94bd3b5ee2d9f387519e739c52a15c1faa4fb9d97e825b848421af4b2e50e6518011e7adb4a34b7
+  checksum: 10c0/3a234fa7766a3efc382cf81f66f474c26cdab2f54f43f757634c81c0444eb2160c2dabbde9741e4983078a318a88515b65416b5f1ab5478548579d7b3ead1d95
   languageName: node
   linkType: hard
 
@@ -173,7 +192,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"blakejs@npm:1.2.1":
+"blakejs@npm:1.2.1, blakejs@npm:^1.2.1":
   version: 1.2.1
   resolution: "blakejs@npm:1.2.1"
   checksum: 10c0/c284557ce55b9c70203f59d381f1b85372ef08ee616a90162174d1291a45d3e5e809fdf9edab6e998740012538515152471dc4f1f9dbfa974ba2b9c1f7b9aad7
@@ -265,6 +284,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mina-signer@npm:^3.0.7":
+  version: 3.0.7
+  resolution: "mina-signer@npm:3.0.7"
+  dependencies:
+    blakejs: "npm:^1.2.1"
+    js-sha256: "npm:^0.9.0"
+  checksum: 10c0/da7c7d5512d6931fdf101a7556cc5a9f0dbc83f022138a333ce9973a742a93517eb7b748735a78cf32e59f264996be90d565f5ba9d79017bda67c8fc0ada0ed3
+  languageName: node
+  linkType: hard
+
 "node-fetch@npm:^2.6.1":
   version: 2.7.0
   resolution: "node-fetch@npm:2.7.0"
@@ -315,16 +344,18 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "token-launchpad@workspace:."
   dependencies:
-    "@minatokens/abi": "npm:^0.16.16"
-    "@minatokens/api": "npm:^0.16.16"
-    "@minatokens/storage": "npm:^0.16.16"
-    "@minatokens/token": "npm:^0.16.16"
-    "@types/node": "npm:^22.13.1"
+    "@silvana-one/abi": "npm:^0.1.9"
+    "@silvana-one/api": "npm:^0.1.9"
+    "@silvana-one/nft": "npm:^0.1.9"
+    "@silvana-one/storage": "npm:^0.1.9"
+    "@silvana-one/token": "npm:^0.1.9"
+    "@silvana-one/upgradable": "npm:^0.1.9"
+    "@types/node": "npm:^22.13.4"
     dotenv: "npm:^16.4.7"
     o1js: "npm:2.2.0"
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.7.3"
-    zkcloudworker: "npm:^0.24.3"
+    zkcloudworker: "npm:^0.25.4"
   languageName: unknown
   linkType: soft
 
@@ -445,14 +476,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zkcloudworker@npm:^0.24.3":
-  version: 0.24.3
-  resolution: "zkcloudworker@npm:0.24.3"
+"zkcloudworker@npm:^0.25.4":
+  version: 0.25.4
+  resolution: "zkcloudworker@npm:0.25.4"
   dependencies:
-    "@minatokens/api": "npm:^0.16.5"
+    "@silvana-one/api": "npm:^0.1.2"
     chalk: "npm:^4.1.2"
   peerDependencies:
     o1js: ^2.1.0
-  checksum: 10c0/e91521edadfc9b858d3783798b95740ee27a916f054648dbf353178a68c31f257df325ac8650f20b30f8dfc106ec0601c4f140b85cdd46c704c2d303ef3954a0
+  checksum: 10c0/46d265bc6e60f7a2c4d71f8e0dbb0967da01c081ad9feb7cc7f3dda673e7096e73c95f7a1f4271ad7cec6b370e1478c115b5342afc2c618ae6c71c101933ad60
   languageName: node
   linkType: hard
