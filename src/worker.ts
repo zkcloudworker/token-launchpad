@@ -16,21 +16,21 @@ import {
   LaunchTokenAdvancedAdminParams,
   TokenTransactionType,
   JobResult,
-} from "@minatokens/api";
+} from "@silvana-one/api";
 import {
   FungibleToken,
   AdvancedFungibleToken,
   BondingCurveFungibleToken,
-} from "@minatokens/token";
+} from "@silvana-one/token";
 import {
-  tokenContracts,
+  contractList,
   tokenVerificationKeys,
   buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
   AdminType,
-} from "@minatokens/abi";
+} from "@silvana-one/abi";
 import {
   VerificationKey,
   PublicKey,
@@ -148,7 +148,7 @@ export class TokenLauncherWorker extends zkCloudWorker {
           case "admin":
           case "user":
             if (item.type === "admin" && !compileAdmin) break;
-            const contract = tokenContracts[key];
+            const contract = contractList[key];
             if (!contract) throw new Error(`Contract ${key} not found`);
             if (!TokenLauncherWorker.verificationKeys[key]) {
               console.time(`compiled ${key}`);

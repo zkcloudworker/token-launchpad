@@ -30,13 +30,13 @@ import {
   FungibleTokenOfferContract,
   AdvancedFungibleToken,
   FungibleTokenAdvancedAdmin,
-} from "@minatokens/token";
+} from "@silvana-one/token";
 import {
   buildTokenLaunchTransaction,
   buildTokenTransaction,
   LAUNCH_FEE,
   TRANSACTION_FEE,
-} from "@minatokens/abi";
+} from "@silvana-one/abi";
 import { zkcloudworker } from "../index.js";
 const JWT: string = process.env.JWT!;
 import {
@@ -56,8 +56,8 @@ import {
   TokenWithdrawOfferTransactionParams,
   LaunchTokenBondingCurveAdminParams,
   TokenRedeemTransactionParams,
-} from "@minatokens/api";
-import { LaunchTokenStandardAdminParams } from "@minatokens/api";
+} from "@silvana-one/api";
+import { LaunchTokenStandardAdminParams } from "@silvana-one/api";
 
 const { TestPublicKey } = Mina;
 type TestPublicKey = Mina.TestPublicKey;
@@ -327,7 +327,7 @@ describe("Token Launchpad Worker", async () => {
           ...(request as any),
           txType: "token:launch",
         },
-        ...payloads,
+        ...(payloads as any),
         symbol,
         sender: admin.toBase58(),
       };
